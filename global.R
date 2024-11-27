@@ -1,5 +1,5 @@
 # shARed mInotAur Database exploratioN Environment : ARIADNE
-# Version: 3.0.0
+# Version: 4.0.0
 # Author:
 # Francesco Vitali §
 # Mocali Stefano §
@@ -7,7 +7,7 @@
 # Elena Tondini §
 # Vivianne Yayende +
 # Antonio Bispo +
-# MArio Adam +
+# Mario Adam +
 # Rajasekaran Murugan @
 #
 # Author e-mail:
@@ -22,8 +22,8 @@
 #
 # Author Affiliation:
 # § Research Centre for Agriculture and Environment, Council for Agricultural Research and Economics (CREA-AA)
-# + INRAE
-# @ BOKU
+# + National Research Institute for Agriculture, Food and Environment (INRAE)
+# @ BOKU University (BOKU)
 
 
 ######################################################################################################
@@ -38,20 +38,19 @@ pacman::p_load(shiny, shinydashboard, maps, ggplot2, tidyverse, plotly, shinythe
 ## --- Loading data, QC, formatting ---##
 ######################################################################################################
 
+# setting folder for raw data
 
-# reading files from "data_source" folder
-
-list.files("./data_source") -> MINOTAUR_DB_csv
+"./data_source/" -> MINOTAUR_rawdata_source
 
 # Preparing different metadata
 
 # general metadata: assembly of a "curated" subset of all the metadata to include
 # variables for features of the app, corrected for values
 
-read.table(file = paste0("./data_source/", MINOTAUR_DB_csv[16]), sep = ";", header = T) -> metadata_study
-read.table(file = paste0("./data_source/", MINOTAUR_DB_csv[15]), sep = ";", header = T) -> metadata_soil
-read.table(file = paste0("./data_source/", MINOTAUR_DB_csv[14]), sep = ";", header = T) -> metadata_scope
-read.table(file = paste0("./data_source/", MINOTAUR_DB_csv[8]), sep = ";", header = T) -> metadata_agri
+read.table(file = paste0(MINOTAUR_rawdata_source, "tr_metadata_study_mstu.csv"), sep = ";", header = T) -> metadata_study
+read.table(file = paste0(MINOTAUR_rawdata_source, "tr_metadata_soil_msoil.csv"), sep = ";", header = T) -> metadata_soil
+read.table(file = paste0(MINOTAUR_rawdata_source, "tr_metadata_scope_msco.csv"), sep = ";", header = T) -> metadata_scope
+read.table(file = paste0(MINOTAUR_rawdata_source, "tr_metadata_agri_magri.csv"), sep = ";", header = T) -> metadata_agri
 
 metadata_study[, colnames(metadata_study) %in% colnames(metadata_study)[c(1, 4, 13, 17, 18, 19, 20, 24, 26, 27)]] -> metadata_study_selected
 metadata_soil[, colnames(metadata_soil) %in% colnames(metadata_soil)[c(1, 17, 20, 24, 25, 26, 27, 29, 31, 35, 36, 37, 39, 41, 43, 44, 45, 46, 47)]] -> metadata_soil_selected
@@ -84,24 +83,28 @@ metadata_MINOTAUR_selected$caco3 <- as.numeric(metadata_MINOTAUR_selected$caco3)
 metadata_MINOTAUR_selected[metadata_MINOTAUR_selected == "na"] <- NA
 
 # Preparing different set of data
+# bacteria
+read.table(file = paste0(MINOTAUR_rawdata_source, "t_data_bacteria_dbac.csv"), sep = ";", header = T) -> bacteria_data
+bacteria_data <- bacteria_data[, colSums(is.na(bacteria_data)) < nrow(bacteria_data)] # remove all NA variables
+
 # fungi
-read.table(file = paste0("./data_source/", MINOTAUR_DB_csv[3]), sep = ";", header = T) %>%
+read.table(file = paste0(MINOTAUR_rawdata_source, "t_data_fungi_dfun.csv"), sep = ";", header = T) %>%
     select(-c(2:12, 16:18, )) -> fungi_data
 fungi_data <- fungi_data[, colSums(is.na(fungi_data)) < nrow(fungi_data)] # remove all NA variables
 # macro
-read.table(file = paste0("./data_source/", MINOTAUR_DB_csv[4]), sep = ";", header = T) %>%
+read.table(file = paste0(MINOTAUR_rawdata_source, "t_data_macro_in_row_dmirow.csv"), sep = ";", header = T) %>%
     select(c(1, 4, 16:19)) -> macrof_data
 # meso
-read.table(file = paste0("./data_source/", MINOTAUR_DB_csv[5]), sep = ";", header = T) %>%
+read.table(file = paste0(MINOTAUR_rawdata_source, "t_data_mesofauna_dmes.csv"), sep = ";", header = T) %>%
     select(-c(1, 3, 11:13, 22, 50, 51, 58:60)) -> mesof_data_community
 mesof_data_community <- mesof_data_community[, colSums(is.na(mesof_data_community)) < nrow(mesof_data_community)] # remove all NA variables
-read.table(file = paste0("./data_source/", MINOTAUR_DB_csv[2]), sep = ";", header = T) %>%
+read.table(file = paste0(MINOTAUR_rawdata_source, "t_data_index_mesofauna_dimes.csv"), sep = ";", header = T) %>%
     select(c(1, 15, 16, 19, 20)) -> mesof_data_index
 mesof_data_index <- mesof_data_index[, colSums(is.na(mesof_data_index)) < nrow(mesof_data_index)] # remove all NA variables
-read.table(file = paste0("./data_source/", MINOTAUR_DB_csv[7]), sep = ";", header = T) %>%
+read.table(file = paste0(MINOTAUR_rawdata_source, "t_data_observation_dobs.csv"), sep = ";", header = T) %>%
     select(c(6, 8, 12, 13, 14, 19)) -> enchit_data
 # micro
-read.table(file = paste0("./data_source/", MINOTAUR_DB_csv[6]), sep = ";", header = T) %>%
+read.table(file = paste0(MINOTAUR_rawdata_source, "t_data_microfauna_dmic.csv"), sep = ";", header = T) %>%
     select(c(1:4, 6, 7, 11, 12, 13, 15, 16, 19, 21, 25, 26, 29)) -> microf_data
 
 
@@ -117,8 +120,13 @@ macro_taxon_codes <- c(macro_taxon_codes, "All macrofauna")
 
 
 sample_list <- list(
+    bact = bacteria_data$id_sampling_point,
     fung = fungi_data$id_sampling_point,
     micro = microf_data$id_sampling_point,
     meso = mesof_data_community$id_sampling_point,
     macro = unique(macrof_data$id_sampling_point)
 )
+
+
+
+
