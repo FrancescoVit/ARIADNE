@@ -11,3 +11,6 @@
 
 # R Environment Variables
 .Renviron
+
+# Ignore data source folder
+data_source/
