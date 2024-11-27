@@ -1,5 +1,5 @@
 # shARed mInotAur Database exploratioN Environment : ARIADNE
-# Version: 3.0.0
+# Version: 4.0.0
 # Author:
 # Francesco Vitali §
 # Mocali Stefano §
@@ -96,7 +96,7 @@ ui <- dashboardPage(
                 box(
                   width = 12,
                   align = "center",
-                  h1("Welcome to ARIADNE"),
+                  h1("Welcome to ARIADNE version 4.0"),
                   br(),
                   br(),
                   h4("Welcome to the shARed mInotAur Database exploratioN Environment, or in short ARIADNE."),
