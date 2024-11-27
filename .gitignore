@@ -13,4 +13,4 @@
 .Renviron
 
 # Ignore data source folder
-data_source/
+next_release/data_source/
