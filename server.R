@@ -40,7 +40,7 @@ server <- function(input, output) {
   #   })
   
   output$logo_MINOTAUR <- renderUI({
-      tags$img(src = "https://ejpsoil.eu/fileadmin/ingen_mappe_valgt/MINOTAUR_Logo_PNG.png")
+      tags$img(src = "https://github.com/FrancescoVit/ARIADNE/blob/main/src/MINOTAUR_Logo_PNG.png")
     })
       
   #### --- Text or notification box indicating n of samples selected by filters ---####
