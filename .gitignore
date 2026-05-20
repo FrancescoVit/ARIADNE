@@ -14,4 +14,6 @@
 
 # Ignore data source folder
 next_release/data_source/
+
+# Ignore rsconnect folder
 /rsconnect
