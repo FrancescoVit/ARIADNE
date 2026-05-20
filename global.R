@@ -40,7 +40,7 @@ pacman::p_load(shiny, shinydashboard, maps, ggplot2, tidyverse, plotly, shinythe
 
 # setting folder for raw data
 
-"./data_source/" -> MINOTAUR_rawdata_source
+"./next_release/data_source/" -> MINOTAUR_rawdata_source
 
 # Preparing different metadata
 
