@@ -26,9 +26,9 @@
 # @ BOKU University (BOKU)
 
 
-source("global4.1.1.R")
-source("ui4.1.1.R")
-source("server4.1.1.R")
+source("global.R")
+source("ui.R")
+source("server.R")
 
 
 shinyApp(
