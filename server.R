@@ -47,7 +47,6 @@ server <- function(input, output) {
   
   #### --- Setting up a reactive filtering ---####
 
-  
   sites_selected_reactive <- reactive({
     
     df <- metadata_MINOTAUR_selected
@@ -62,13 +61,17 @@ server <- function(input, output) {
     if (!is.null(input$state_select)) {
       df <- dplyr::filter(df, country_code %in% input$state_select)
     }
+
+    biota_lvls <- input$biolevel_select
     
-    biota_lvls <- c("bact","fung","micro","meso","macro")
+    if (is.null(biota_lvls) || length(biota_lvls) == 0) {
+      return(data.frame())
+    }
+    
     sample_to_keep <- unlist(sample_list[biota_lvls])
     
     df <- df[df$id_sampling_point %in% sample_to_keep, ]
     
-    df
   })
   
   

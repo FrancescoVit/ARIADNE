@@ -159,5 +159,3 @@ common_vars <- c(
   "OC" = "organic_carbon"
 )
 
-
-
