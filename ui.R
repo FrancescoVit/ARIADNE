@@ -96,7 +96,7 @@ ui <- dashboardPage(
                 box(
                   width = 12,
                   align = "center",
-                  h1("Welcome to ARIADNE version 4.0"),
+                  h1("Welcome to ARIADNE version 4.1.1"),
                   br(),
                   br(),
                   h4("Welcome to the shARed mInotAur Database exploratioN Environment, or in short ARIADNE."),
