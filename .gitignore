@@ -15,5 +15,10 @@
 # Ignore data source folder
 next_release/data_source/
 
+# Ignore next_release folder
+next_release/
+
+# To do: remove folder next_release, move data source under /main, ignore data_source
+
 # Ignore rsconnect folder
 /rsconnect
