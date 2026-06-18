@@ -1,5 +1,5 @@
 # shARed mInotAur Database exploratioN Environment : ARIADNE
-# Version: 4.0.0
+# Version: 4.1.1
 # Author:
 # Francesco Vitali §
 # Mocali Stefano §
@@ -27,11 +27,18 @@
 
 
 ######################################################################################################
-## --- Loading libraries ---##
+## --- Loading libraries, install if necessary ---##
 ######################################################################################################
 
-if (!require("pacman")) install.packages("pacman")
-pacman::p_load(shiny, shinydashboard, maps, ggplot2, tidyverse, plotly, shinythemes, rstatix)
+
+packages <- c("shiny", "shinydashboard", "tidyverse", "plotly", "rstatix", "maps", "shinythemes")
+
+missing <- setdiff(packages, rownames(installed.packages()))
+if (length(missing) > 0) {
+  install.packages(missing)
+}
+
+lapply(packages, library, character.only = TRUE)
 
 
 ######################################################################################################
@@ -40,7 +47,7 @@ pacman::p_load(shiny, shinydashboard, maps, ggplot2, tidyverse, plotly, shinythe
 
 # setting folder for raw data
 
-"./next_release/data_source/" -> MINOTAUR_rawdata_source
+MINOTAUR_rawdata_source <- "next_release/data_source/"
 
 # Preparing different metadata
 
@@ -57,30 +64,25 @@ metadata_soil[, colnames(metadata_soil) %in% colnames(metadata_soil)[c(1, 17, 20
 metadata_scope[, colnames(metadata_scope) %in% colnames(metadata_scope)[c(14, 16, 17, 18)]] -> metadata_scope_selected
 metadata_agri[, colnames(metadata_agri) %in% colnames(metadata_agri)[c(28, 1, 2, 3, 10, 11, 12, 13, 14, 17, 18, 19, 20, 22, 23, 24, 25, 26, 27)]] -> metadata_agri_selected
 
-full_join(
-    full_join(
-        full_join(metadata_study_selected, metadata_soil_selected, by = "id_sampling_point"),
-        metadata_scope_selected,
-        by = "id_sampling_point"
-    ),
-    metadata_agri_selected,
-    by = "id_sampling_point"
-) -> metadata_MINOTAUR_selected
+
+metadata_MINOTAUR_selected <- metadata_study_selected %>%
+  full_join(metadata_soil_selected, by = "id_sampling_point") %>%
+  full_join(metadata_scope_selected, by = "id_sampling_point") %>%
+  full_join(metadata_agri_selected, by = "id_sampling_point")
+
 
 summary(unique(metadata_study_selected$id_sampling_point))
 
 # curation of metadata
 
-# summary(metadata_MINOTAUR_selected)
+metadata_MINOTAUR_selected <- metadata_MINOTAUR_selected %>%
+  mutate(
+    mean_temperature_of_the_day = as.numeric(mean_temperature_of_the_day),
+    year_precipitation = as.numeric(year_precipitation),
+    caco3 = as.numeric(caco3)
+  ) %>%
+  mutate(across(where(is.character), ~na_if(., "na")))
 
-# 1) mean temp is character
-metadata_MINOTAUR_selected$mean_temperature_of_the_day <- as.numeric(metadata_MINOTAUR_selected$mean_temperature_of_the_day)
-# 2) year prec is character
-metadata_MINOTAUR_selected$year_precipitation <- as.numeric(metadata_MINOTAUR_selected$year_precipitation)
-# 3) year prec is character
-metadata_MINOTAUR_selected$caco3 <- as.numeric(metadata_MINOTAUR_selected$caco3)
-# 4) convert na character in real NA
-metadata_MINOTAUR_selected[metadata_MINOTAUR_selected == "na"] <- NA
 
 # Preparing different set of data
 # bacteria
@@ -110,11 +112,13 @@ read.table(file = paste0(MINOTAUR_rawdata_source, "t_data_microfauna_dmic.csv"),
 
 # setup of some variables or list for dropdown or selection tools
 
-levels(as.factor(metadata_MINOTAUR_selected$farming_system)) -> farming_systems
-levels(as.factor(metadata_MINOTAUR_selected$study_landuse)) -> land_uses
-levels(as.factor(metadata_MINOTAUR_selected$country_code)) -> country_codes
+get_levels <- function(x) levels(factor(x))
 
-levels(as.factor(macrof_data$taxon)) -> macro_taxon_codes
+farming_systems <- get_levels(metadata_MINOTAUR_selected$farming_system)
+land_uses <- get_levels(metadata_MINOTAUR_selected$study_landuse)
+country_codes <- get_levels(metadata_MINOTAUR_selected$country_code)
+
+macro_taxon_codes <- get_levels(macrof_data$taxon)
 macro_taxon_codes <- macro_taxon_codes[-1]
 macro_taxon_codes <- c(macro_taxon_codes, "All macrofauna")
 
@@ -127,6 +131,33 @@ sample_list <- list(
     macro = unique(macrof_data$id_sampling_point)
 )
 
+common_vars <- c(
+  "Land use" = "study_landuse",
+  "WRB soil type" = "soil_type_wrb",
+  "Soil taxonomy" = "soil_type_in_soil_taxonomy",
+  "Soil texture" = "texture",
+  "Management" = "farming_system",
+  "Cropping system" = "cropping_system",
+  "Crop" = "crop_1",
+  "Rotation" = "crop_rotation",
+  "Tillage" = "tillage_system",
+  "Fertilization" = "fertilizer_type",
+  "% sand" = "sand",
+  "% silt" = "silt",
+  "pH" = "ph_mean",
+  "Humidity" = "soil_humidity",
+  "CaCO3" = "caco3",
+  "CEC" = "cec_mean",
+  "C/N" = "carbon_azote_ratio_mean",
+  "SOC" = "soc_mean",
+  "SOM" = "som_mean",
+  "Bulk density" = "bulk_density",
+  "P total" = "phosphorus_total",
+  "P avail" = "phosphorus_available",
+  "K avail" = "potassium_available",
+  "N" = "nitrogen",
+  "OC" = "organic_carbon"
+)
 
 
 
