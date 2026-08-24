@@ -168,7 +168,7 @@ server <- function(input, output) {
   #### --- Biodiversity index tab:  ---####
   #### --- Bacteria ---####
   
-  output$plot_biodiv_index_bacteria <- renderPlotly({
+  output$plot_biodiv_index_bacteria <- renderPlot({
   
     sites_selected <- sites_selected_reactive()
     
@@ -198,11 +198,8 @@ server <- function(input, output) {
           xlab(input$bacteria_var_choice) +
           ylab(input$bacteria_index_choice) +
           theme_bw() -> plt12
-        
-        ggplotly(plt12) -> plt12
-        plt12$x$data[[1]]$hoverinfo <- "none"
-        
-        ggplotly(plt12)
+
+        plt12
       } else if (input$treshold_line_bact != 0) {
         validate(
           need(is.na(meta_bact_selected[, input$bacteria_var_choice]) == F, "No data for selected variable")
@@ -217,11 +214,8 @@ server <- function(input, output) {
           xlab(input$bacteria_var_choice) +
           ylab(input$bacteria_index_choice) +
           theme_bw() -> plt12
-        
-        ggplotly(plt12) -> plt12
-        plt12$x$data[[1]]$hoverinfo <- "none"
-        
-        ggplotly(plt12)
+
+        plt12
       }
     } else if (is.character(meta_bact_selected[, input$bacteria_var_choice]) == T) {
       meta_bact_selected %>%
@@ -240,14 +234,11 @@ server <- function(input, output) {
         ylab(input$bacteria_index_choice) +
         theme_bw() +
         coord_flip() -> plt12
-      
-      ggplotly(plt12) -> plt12
-      plt12$x$data[[1]]$hoverinfo <- "none"
-      
-      ggplotly(plt12)
+
+      plt12
     }
   })
-  
+
   output$bacteria_index_table <- renderDataTable({
    
     sites_selected <- sites_selected_reactive()
@@ -491,7 +482,7 @@ server <- function(input, output) {
   
   #### --- Fungi ---####
 
-  output$plot_biodiv_index_fungi <- renderPlotly({
+  output$plot_biodiv_index_fungi <- renderPlot({
   
     sites_selected <- sites_selected_reactive()
 
@@ -522,10 +513,7 @@ server <- function(input, output) {
           ylab(input$fungi_index_choice) +
           theme_bw() -> plt6
 
-        ggplotly(plt6) -> plt6
-        plt6$x$data[[1]]$hoverinfo <- "none"
-
-        ggplotly(plt6)
+        plt6
       } else if (input$treshold_line_fung != 0) {
         validate(
           need(is.na(meta_fungi_selected[, input$fungi_var_choice]) == F, "No data for selected variable")
@@ -541,10 +529,7 @@ server <- function(input, output) {
           ylab(input$fungi_index_choice) +
           theme_bw() -> plt6
 
-        ggplotly(plt6) -> plt6
-        plt6$x$data[[1]]$hoverinfo <- "none"
-
-        ggplotly(plt6)
+        plt6
       }
     } else if (is.character(meta_fungi_selected[, input$fungi_var_choice]) == T) {
       meta_fungi_selected %>%
@@ -564,10 +549,7 @@ server <- function(input, output) {
         theme_bw() +
         coord_flip() -> plt6
 
-      ggplotly(plt6) -> plt6
-      plt6$x$data[[1]]$hoverinfo <- "none"
-
-      ggplotly(plt6)
+      plt6
     }
   })
 
@@ -813,7 +795,7 @@ server <- function(input, output) {
 
   #### --- Mesofauna ---####
 
-  output$plot_biodiv_index_meso <- renderPlotly({
+  output$plot_biodiv_index_meso <- renderPlot({
     
     sites_selected <- sites_selected_reactive()
 
@@ -876,10 +858,7 @@ server <- function(input, output) {
           ylab("QBS-ar") +
           theme_bw() -> plt5
 
-        ggplotly(plt5) -> plt5
-        plt5$x$data[[1]]$hoverinfo <- "none"
-
-        ggplotly(plt5)
+        plt5
       } else if (input$treshold_line_meso != 0) {
         validate(
           need(is.na(meta_meso_selected[, input$meso_var_choice]) == F, "No data for selected variable")
@@ -895,10 +874,7 @@ server <- function(input, output) {
           ylab("QBS-ar") +
           theme_bw() -> plt5
 
-        ggplotly(plt5) -> plt5
-        plt5$x$data[[1]]$hoverinfo <- "none"
-
-        ggplotly(plt5)
+        plt5
       }
     } else if (is.character(meta_meso_selected[, input$meso_var_choice]) == T) {
       meta_meso_selected %>%
@@ -918,10 +894,7 @@ server <- function(input, output) {
         theme_bw() +
         coord_flip() -> plt5
 
-      ggplotly(plt5) -> plt5
-      plt5$x$data[[1]]$hoverinfo <- "none"
-
-      ggplotly(plt5)
+      plt5
     }
   })
 
@@ -1257,7 +1230,7 @@ server <- function(input, output) {
 
   #### --- Microfauna ####
 
-  output$plot_biodiv_index_micro <- renderPlotly({
+  output$plot_biodiv_index_micro <- renderPlot({
    
     sites_selected <- sites_selected_reactive()
 
@@ -1280,10 +1253,7 @@ server <- function(input, output) {
           ylab(input$micro_index_choice) +
           theme_bw() -> plt7
 
-        ggplotly(plt7) -> plt7
-        plt7$x$data[[1]]$hoverinfo <- "none"
-
-        ggplotly(plt7)
+        plt7
       } else if (input$treshold_line_micro != 0) {
         meta_micro_selected %>%
           as_tibble() %>%
@@ -1295,10 +1265,7 @@ server <- function(input, output) {
           ylab(input$micro_index_choice) +
           theme_bw() -> plt7
 
-        ggplotly(plt7) -> plt7
-        plt7$x$data[[1]]$hoverinfo <- "none"
-
-        ggplotly(plt7)
+        plt7
       }
     } else if (is.character(meta_micro_selected[, input$micro_var_choice]) == T) {
       meta_micro_selected %>%
@@ -1312,10 +1279,7 @@ server <- function(input, output) {
         theme_bw() +
         coord_flip() -> plt7
 
-      ggplotly(plt7) -> plt7
-      plt7$x$data[[1]]$hoverinfo <- "none"
-
-      ggplotly(plt7)
+      plt7
     }
   })
 
@@ -1544,7 +1508,7 @@ server <- function(input, output) {
 
   #### --- Macrofauna ####  
   
-  output$plot_biodiv_index_macro <- renderPlotly({
+  output$plot_biodiv_index_macro <- renderPlot({
     
   
     sites_selected <- sites_selected_reactive()
@@ -1590,13 +1554,9 @@ server <- function(input, output) {
           scale_colour_manual(values = c("#E69F00", "#56B4E9", "#009E73", "#D55E00", "#CC79A7")) +
           theme_bw() -> plt14
 
-        ggplotly(plt14) -> plt14
-        plt14$x$data[[1]]$hoverinfo <- "none"
+        plt14
 
-        ggplotly(plt14)
-          
-        
-      }  else if (input$treshold_line_macro != 0) { 
+      }  else if (input$treshold_line_macro != 0) {
         
         meta_macro_abb_selected %>% 
           as_tibble() %>%
@@ -1612,12 +1572,9 @@ server <- function(input, output) {
           xlab(macro_var_choice) +
           scale_colour_manual(values = c("#E69F00", "#56B4E9", "#009E73", "#D55E00", "#CC79A7")) +
           theme_bw() -> plt14
-        
-        ggplotly(plt14) -> plt14
-        plt14$x$data[[1]]$hoverinfo <- "none"
-        
-        ggplotly(plt14)
-        
+
+        plt14
+
       }
       } else if (is.character(meta_macro_abb_selected[, input$macro_var_choice]) == T) {
       
@@ -1635,15 +1592,12 @@ server <- function(input, output) {
           ylab(input$macro_index_choice) +
           theme_bw() +
           coord_flip() -> plt14
-        
-        ggplotly(plt14) -> plt14
-        plt14$x$data[[1]]$hoverinfo <- "none"
-        
-        ggplotly(plt14)
+
+        plt14
     }
   })
-  
-  output$barplot_biodiv_index_macro <- renderPlotly({
+
+  output$barplot_biodiv_index_macro <- renderPlot({
   
     sites_selected <- sites_selected_reactive()
     
@@ -1697,9 +1651,9 @@ server <- function(input, output) {
         geom_bar(stat = "identity") +
         theme_bw() +
         scale_fill_manual(values = c("#E69F00", "#56B4E9", "#009E73", "#D55E00", "#CC79A7")) -> plt15
-      
-      ggplotly(plt15)
-      
+
+      plt15
+
     }
     
     

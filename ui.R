@@ -326,7 +326,7 @@ ui <- dashboardPage(
                                     fluidRow(
                                       column(
                                         width = 12, align = "center",
-                                        plotlyOutput("plot_biodiv_index_bacteria",
+                                        plotOutput("plot_biodiv_index_bacteria",
                                                      width = "100%"
                                         )
                                       )
@@ -387,7 +387,7 @@ ui <- dashboardPage(
                                         fluidRow(
                                             column(
                                                 width = 12, align = "center",
-                                                plotlyOutput("plot_biodiv_index_fungi",
+                                                plotOutput("plot_biodiv_index_fungi",
                                                     width = "100%"
                                                 )
                                             )
@@ -448,7 +448,7 @@ ui <- dashboardPage(
                                         fluidRow(
                                             column(
                                                 width = 12, align = "center",
-                                                plotlyOutput("plot_biodiv_index_micro",
+                                                plotOutput("plot_biodiv_index_micro",
                                                     width = "100%"
                                                 )
                                             )
@@ -506,7 +506,7 @@ ui <- dashboardPage(
                                         fluidRow(
                                             column(
                                                 width = 12, align = "center",
-                                                plotlyOutput("plot_biodiv_index_meso",
+                                                plotOutput("plot_biodiv_index_meso",
                                                     width = "100%"
                                                 )
                                             )
@@ -556,7 +556,7 @@ ui <- dashboardPage(
                                     fluidRow(
                                       column(
                                         width = 12, align = "center",
-                                        plotlyOutput("plot_biodiv_index_macro",
+                                        plotOutput("plot_biodiv_index_macro",
                                                      width = "100%"
                                         )
                                       )
@@ -564,7 +564,7 @@ ui <- dashboardPage(
                                     fluidRow(
                                       column(
                                         width = 12, align = "center",
-                                        plotlyOutput("barplot_biodiv_index_macro",
+                                        plotOutput("barplot_biodiv_index_macro",
                                                      width = "100%"
                                         )
                                       )
