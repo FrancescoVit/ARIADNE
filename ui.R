@@ -605,7 +605,7 @@ ui <- dashboardPage(
                                    framework for monitoring, assessing and managing soil health. It was approved by the
                                    European Parliament and the Council on 12 November 2025, published in the Official
                                    Journal on 26 November 2025, and entered into force on 16 December 2025. Member States
-                                   have until 17 December 2028 to transpose it into national law."),
+                                   have three years from entry into force to transpose it into national law."),
                                 p("The Directive was proposed by the European Commission in July 2023 as part of the EU
                                    Soil Strategy for 2030 and the European Green Deal, in response to evidence that a
                                    large share of European soils are in an unhealthy condition. It sets out a common list
