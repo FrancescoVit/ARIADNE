@@ -631,22 +631,26 @@ ui <- dashboardPage(
                                             "Part A - descriptors with criteria established at EU level (salinisation, loss of SOC, subsoil compaction)"
                                         ))),
                                         tags$tr(tags$td("Electrical conductivity (EC)"), tags$td("Salinisation"),
-                                                tags$td("Target/trigger values set by Member States"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
+                                                tags$td("EU-mandated descriptor; STV/OTV value set nationally"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
                                         tags$tr(tags$td("Soil organic carbon (SOC) concentration"), tags$td("Loss of soil organic carbon"),
-                                                tags$td("Target/trigger values set by Member States"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓"))),
+                                                tags$td("EU-mandated descriptor; STV/OTV value set nationally"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓"))),
                                         tags$tr(tags$td("Bulk density (subsoil)"), tags$td("Subsoil compaction"),
-                                                tags$td("Target/trigger values set by Member States"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓*"))),
+                                                tags$td("EU-mandated descriptor; STV/OTV value set nationally"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓*"))),
 
                                         tags$tr(tags$td(colspan = 4, tags$strong(
-                                            "Part B - descriptors with criteria established by Member States (phosphorus, erosion, contamination, water retention, SOC stock)"
+                                            "Part B - descriptors with criteria established by Member States (phosphorus, erosion, contamination, water retention/infiltration, air capacity, SOC stock)"
                                         ))),
                                         tags$tr(tags$td("Available phosphorus"), tags$td("Nutrient/fertility status"),
                                                 tags$td("Set by Member States"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓"))),
                                         tags$tr(tags$td("Soil erosion rate"), tags$td("Water/wind erosion"),
                                                 tags$td("Set by Member States"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
-                                        tags$tr(tags$td("Soil contamination (heavy metals, organic contaminants)"), tags$td("Chemical contamination"),
+                                        tags$tr(tags$td("Soil contamination (heavy metals)"), tags$td("Chemical contamination"),
                                                 tags$td("Set by Member States"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
-                                        tags$tr(tags$td("Water retention capacity"), tags$td("Water regulation"),
+                                        tags$tr(tags$td("Water holding capacity"), tags$td("Water regulation"),
+                                                tags$td("Set by Member States"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
+                                        tags$tr(tags$td("Saturated hydraulic conductivity"), tags$td("Water infiltration"),
+                                                tags$td("Set by Member States"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
+                                        tags$tr(tags$td("Air capacity"), tags$td("Soil aeration"),
                                                 tags$td("Set by Member States"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
                                         tags$tr(tags$td("Soil organic carbon stock"), tags$td("Loss of organic carbon (stock, not concentration)"),
                                                 tags$td("Set by Member States"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
@@ -678,7 +682,13 @@ ui <- dashboardPage(
                                     )
                                 ),
                                 p(em("* MINOTAUR records a single bulk density value that does not distinguish
-                                      topsoil from subsoil layers."))
+                                      topsoil from subsoil layers.")),
+                                p(em("For Part A, \"established at Union level\" means the Directive makes the
+                                      descriptor and its measurement methodology (Annex II) mandatory for every
+                                      Member State - not that the EU fixes a single numeric threshold. As with
+                                      Part B, the actual Sustainable Target Value and Operational Trigger Value
+                                      for each descriptor are still set nationally; the final Directive text does
+                                      not specify EU-wide numeric thresholds for any descriptor."))
                             )
                         )
                     )
