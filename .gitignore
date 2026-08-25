@@ -22,3 +22,6 @@ next_release/
 
 # Ignore rsconnect folder
 /rsconnect
+
+# Claude Code local settings/config
+.claude/
