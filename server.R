@@ -442,17 +442,23 @@ server <- function(input, output) {
         select(c(!!as.symbol(input$bacteria_index_choice), !!as.symbol(input$bacteria_var_choice))) %>%
         drop_na() %>%
         wilcox_test(as.formula(paste(bacteria_index_choice, paste("~", bacteria_var_choice))), p.adjust.method = "bonferroni") -> bacteria_wilcox
-      
+
+      meta_bacteria_selected %>%
+        select(c(!!as.symbol(input$bacteria_index_choice), !!as.symbol(input$bacteria_var_choice))) %>%
+        drop_na() %>%
+        wilcox_effsize(as.formula(paste(bacteria_index_choice, paste("~", bacteria_var_choice)))) -> bacteria_effsize
+
       bacteria_wilcox %>%
         as.data.frame() %>%
-        mutate_at(vars(p), funs(ifelse(. > 0.05, NA, .))) %>% 
+        left_join(as.data.frame(bacteria_effsize)[, c("group1", "group2", "effsize")], by = c("group1", "group2")) %>%
+        mutate_at(vars(p), funs(ifelse(. > 0.05, NA, .))) %>%
+        mutate(effsize = ifelse(is.na(p), NA, effsize)) %>%
         ggplot(aes(
           x = group1,
           y = group2
         )) +
-        geom_tile(
+        geom_tile(aes(fill = effsize),
           color = "black",
-          fill = "gray100",
           lwd = 0.8,
           linetype = 1
         ) +
@@ -462,21 +468,22 @@ server <- function(input, output) {
         ) +
         xlab("") +
         ylab("") +
-        # scale_fill_gradient(
-        #   low = "grey80",
-        #   high = "white"
-        # ) +
+        scale_fill_gradient(
+          low = "yellow",
+          high = "red",
+          na.value = "white",
+          limits = c(0, 1),
+          name = "Effect size (r)"
+        ) +
         theme(
-          legend.position = "none",
+          legend.position = "right",
           panel.grid.major.y = element_blank(),
           panel.grid.major.x = element_line(colour = "black", linetype = "dotted"),
-          # panel.grid.major = element_blank(),
-          # panel.grid.minor = element_blank(),
           panel.background = element_blank(),
           axis.text=element_text(size=12)
         ) +
         theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) -> plt13
-      
+
       plt13
     }
   })
@@ -757,16 +764,22 @@ server <- function(input, output) {
         drop_na() %>%
         wilcox_test(as.formula(paste(fungi_index_choice, paste("~", fungi_var_choice))), p.adjust.method = "bonferroni") -> fungi_wilcox
 
+      meta_fungi_selected %>%
+        select(c(!!as.symbol(input$fungi_index_choice), !!as.symbol(input$fungi_var_choice))) %>%
+        drop_na() %>%
+        wilcox_effsize(as.formula(paste(fungi_index_choice, paste("~", fungi_var_choice)))) -> fungi_effsize
+
       fungi_wilcox %>%
         as.data.frame() %>%
-        mutate_at(vars(p), funs(ifelse(. > 0.05, NA, .))) %>% 
+        left_join(as.data.frame(fungi_effsize)[, c("group1", "group2", "effsize")], by = c("group1", "group2")) %>%
+        mutate_at(vars(p), funs(ifelse(. > 0.05, NA, .))) %>%
+        mutate(effsize = ifelse(is.na(p), NA, effsize)) %>%
         ggplot(aes(
           x = group1,
           y = group2
         )) +
-        geom_tile(
+        geom_tile(aes(fill = effsize),
           color = "black",
-          fill = "gray100",
           lwd = 0.8,
           linetype = 1
         ) +
@@ -776,16 +789,17 @@ server <- function(input, output) {
         ) +
         xlab("") +
         ylab("") +
-        # scale_fill_gradient(
-        #   low = "grey80",
-        #   high = "white"
-        # ) +
+        scale_fill_gradient(
+          low = "yellow",
+          high = "red",
+          na.value = "white",
+          limits = c(0, 1),
+          name = "Effect size (r)"
+        ) +
         theme(
-          legend.position = "none",
+          legend.position = "right",
           panel.grid.major.y = element_blank(),
           panel.grid.major.x = element_line(colour = "black", linetype = "dotted"),
-          # panel.grid.major = element_blank(),
-          # panel.grid.minor = element_blank(),
           panel.background = element_blank(),
           axis.text=element_text(size=12)
           ) +
@@ -1193,16 +1207,22 @@ server <- function(input, output) {
         drop_na() %>%
         wilcox_test(as.formula(paste("diversity_index_value", paste("~", meso_var_choice))), p.adjust.method = "bonferroni") -> meso_wilcox
 
+      meta_meso_selected %>%
+        select(c(diversity_index_value, !!as.symbol(input$meso_var_choice))) %>%
+        drop_na() %>%
+        wilcox_effsize(as.formula(paste("diversity_index_value", paste("~", meso_var_choice)))) -> meso_effsize
+
       meso_wilcox %>%
         as.data.frame() %>%
-        mutate_at(vars(p), funs(ifelse(. > 0.05, NA, .))) %>% 
+        left_join(as.data.frame(meso_effsize)[, c("group1", "group2", "effsize")], by = c("group1", "group2")) %>%
+        mutate_at(vars(p), funs(ifelse(. > 0.05, NA, .))) %>%
+        mutate(effsize = ifelse(is.na(p), NA, effsize)) %>%
         ggplot(aes(
           x = group1,
           y = group2
         )) +
-        geom_tile(
+        geom_tile(aes(fill = effsize),
           color = "black",
-          fill = "gray100",
           lwd = 0.8,
           linetype = 1
         ) +
@@ -1212,16 +1232,17 @@ server <- function(input, output) {
         ) +
         xlab("") +
         ylab("") +
-        # scale_fill_gradient(
-        #   low = "grey80",
-        #   high = "white"
-        # ) +
+        scale_fill_gradient(
+          low = "yellow",
+          high = "red",
+          na.value = "white",
+          limits = c(0, 1),
+          name = "Effect size (r)"
+        ) +
         theme(
-          legend.position = "none",
+          legend.position = "right",
           panel.grid.major.y = element_blank(),
           panel.grid.major.x = element_line(colour = "black", linetype = "dotted"),
-          # panel.grid.major = element_blank(),
-          # panel.grid.minor = element_blank(),
           panel.background = element_blank(),
           axis.text=element_text(size=12)
         ) +
@@ -1472,16 +1493,22 @@ server <- function(input, output) {
         drop_na() %>%
         wilcox_test(as.formula(paste(micro_index_choice, paste("~", micro_var_choice))), p.adjust.method = "bonferroni") -> micro_wilcox
 
+      meta_micro_selected %>%
+        select(c(!!as.symbol(input$micro_index_choice), !!as.symbol(input$micro_var_choice))) %>%
+        drop_na() %>%
+        wilcox_effsize(as.formula(paste(micro_index_choice, paste("~", micro_var_choice)))) -> micro_effsize
+
       micro_wilcox %>%
         as.data.frame() %>%
-        mutate_at(vars(p), funs(ifelse(. > 0.05, NA, .))) %>% 
+        left_join(as.data.frame(micro_effsize)[, c("group1", "group2", "effsize")], by = c("group1", "group2")) %>%
+        mutate_at(vars(p), funs(ifelse(. > 0.05, NA, .))) %>%
+        mutate(effsize = ifelse(is.na(p), NA, effsize)) %>%
         ggplot(aes(
           x = group1,
           y = group2
           )) +
-        geom_tile(
+        geom_tile(aes(fill = effsize),
           color = "black",
-          fill = "gray100",
           lwd = 0.8,
           linetype = 1
         ) +
@@ -1491,16 +1518,17 @@ server <- function(input, output) {
         ) +
         xlab("") +
         ylab("") +
-        # scale_fill_gradient(
-        #   low = "grey80",
-        #   high = "white"
-        # ) +
+        scale_fill_gradient(
+          low = "yellow",
+          high = "red",
+          na.value = "white",
+          limits = c(0, 1),
+          name = "Effect size (r)"
+        ) +
         theme(
-          legend.position = "none",
+          legend.position = "right",
           panel.grid.major.y = element_blank(),
           panel.grid.major.x = element_line(colour = "black", linetype = "dotted"),
-          # panel.grid.major = element_blank(),
-          # panel.grid.minor = element_blank(),
           panel.background = element_blank(),
           axis.text=element_text(size=12)
         ) +

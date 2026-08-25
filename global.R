@@ -40,6 +40,13 @@ if (length(missing) > 0) {
 
 lapply(packages, library, character.only = TRUE)
 
+# coin is required by rstatix::wilcox_effsize() but must NOT be attached with
+# library(): it defines its own wilcox_test() that would mask rstatix::wilcox_test()
+# used throughout server.R. Install only; rstatix calls coin:: internally.
+if (!requireNamespace("coin", quietly = TRUE)) {
+  install.packages("coin")
+}
+
 
 ######################################################################################################
 ## --- Loading data, QC, formatting ---##
