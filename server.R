@@ -469,8 +469,8 @@ server <- function(input, output) {
         xlab("") +
         ylab("") +
         scale_fill_gradient(
-          low = "yellow",
-          high = "red",
+          low = "#a6611a",
+          high = "#018571",
           na.value = "white",
           limits = c(0, 1),
           name = "Effect size (r)"
@@ -790,8 +790,8 @@ server <- function(input, output) {
         xlab("") +
         ylab("") +
         scale_fill_gradient(
-          low = "yellow",
-          high = "red",
+          low = "#a6611a",
+          high = "#018571",
           na.value = "white",
           limits = c(0, 1),
           name = "Effect size (r)"
@@ -1233,8 +1233,8 @@ server <- function(input, output) {
         xlab("") +
         ylab("") +
         scale_fill_gradient(
-          low = "yellow",
-          high = "red",
+          low = "#a6611a",
+          high = "#018571",
           na.value = "white",
           limits = c(0, 1),
           name = "Effect size (r)"
@@ -1519,8 +1519,8 @@ server <- function(input, output) {
         xlab("") +
         ylab("") +
         scale_fill_gradient(
-          low = "yellow",
-          high = "red",
+          low = "#a6611a",
+          high = "#018571",
           na.value = "white",
           limits = c(0, 1),
           name = "Effect size (r)"
