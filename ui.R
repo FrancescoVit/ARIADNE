@@ -46,7 +46,8 @@ ui <- dashboardPage(
         sidebarMenu(
             menuItem("Home", tabName = "Home", icon = icon("house")),
             menuItem("Overview", tabName = "Overview", icon = icon("dashboard")),
-            menuItem("Analysis", tabName = "Analysis", icon = icon("magnifying-glass-chart"))
+            menuItem("Analysis", tabName = "Analysis", icon = icon("magnifying-glass-chart")),
+            menuItem("SML", tabName = "SML", icon = icon("gavel"))
         )
     ),
 
@@ -577,7 +578,112 @@ ui <- dashboardPage(
                         ) # close Tabsetpanel
                     ) # close box
                 ) # close fluidrow
-            ) # close second tab content
+            ), # close second tab content
+
+            #### --- Third tab content: SML tab ---####
+            tabItem(
+                tabName = "SML",
+                fluidRow(
+                    box(
+                        width = 12,
+                        tabsetPanel(
+                            type = "tabs", id = "sml_tab",
+                            #### --- General Information panel ---####
+                            tabPanel(
+                                title = "General Information", value = "t_sml_info",
+                                br(),
+                                h4("Sources"),
+                                tags$ul(
+                                    tags$li(tags$a(href = "https://eur-lex.europa.eu/eli/dir/2025/2360/oj/eng",
+                                                   target = "_blank",
+                                                   "Directive (EU) 2025/2360 - official text (EUR-Lex)")),
+                                    tags$li(tags$a(href = "https://mission-soil-platform.ec.europa.eu/news-events/latest-news/soil-monitoring-law-published-eu-official-journal",
+                                                   target = "_blank",
+                                                   "European Commission - Mission Soil Platform: the Soil Monitoring Law is published"))
+                                ),
+                                p("The EU Soil Monitoring Law (Directive (EU) 2025/2360) is the first Union-wide legal
+                                   framework for monitoring, assessing and managing soil health. It was approved by the
+                                   European Parliament and the Council on 12 November 2025, published in the Official
+                                   Journal on 26 November 2025, and entered into force on 16 December 2025. Member States
+                                   have until 17 December 2028 to transpose it into national law."),
+                                p("The Directive was proposed by the European Commission in July 2023 as part of the EU
+                                   Soil Strategy for 2030 and the European Green Deal, in response to evidence that a
+                                   large share of European soils are in an unhealthy condition. It sets out a common list
+                                   of soil descriptors (Annex I), covering physical, chemical and biological properties,
+                                   grouped into four parts depending on how their assessment criteria are set. For
+                                   descriptors with defined criteria, Member States - not the Directive itself - establish
+                                   non-binding Sustainable Target Values and Operational Trigger Values. The long-term,
+                                   non-binding ambition is healthy soils across the EU by 2050."),
+                                br(),
+                                h4("Annex I descriptors and their coverage in MINOTAUR"),
+                                p(em("The last column indicates whether an equivalent variable is available in the
+                                      MINOTAUR database used by this app.")),
+                                tags$table(
+                                    class = "table table-bordered table-striped",
+                                    tags$thead(
+                                        tags$tr(
+                                            tags$th("Variable"), tags$th("Description"),
+                                            tags$th("Threshold"), tags$th("In MINOTAUR")
+                                        )
+                                    ),
+                                    tags$tbody(
+                                        tags$tr(tags$td(colspan = 4, tags$strong(
+                                            "Part A - descriptors with criteria established at EU level (salinisation, loss of SOC, subsoil compaction)"
+                                        ))),
+                                        tags$tr(tags$td("Electrical conductivity (EC)"), tags$td("Salinisation"),
+                                                tags$td("Target/trigger values set by Member States"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
+                                        tags$tr(tags$td("Soil organic carbon (SOC) concentration"), tags$td("Loss of soil organic carbon"),
+                                                tags$td("Target/trigger values set by Member States"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓"))),
+                                        tags$tr(tags$td("Bulk density (subsoil)"), tags$td("Subsoil compaction"),
+                                                tags$td("Target/trigger values set by Member States"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓*"))),
+
+                                        tags$tr(tags$td(colspan = 4, tags$strong(
+                                            "Part B - descriptors with criteria established by Member States (phosphorus, erosion, contamination, water retention, SOC stock)"
+                                        ))),
+                                        tags$tr(tags$td("Available phosphorus"), tags$td("Nutrient/fertility status"),
+                                                tags$td("Set by Member States"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓"))),
+                                        tags$tr(tags$td("Soil erosion rate"), tags$td("Water/wind erosion"),
+                                                tags$td("Set by Member States"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
+                                        tags$tr(tags$td("Soil contamination (heavy metals, organic contaminants)"), tags$td("Chemical contamination"),
+                                                tags$td("Set by Member States"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
+                                        tags$tr(tags$td("Water retention capacity"), tags$td("Water regulation"),
+                                                tags$td("Set by Member States"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
+                                        tags$tr(tags$td("Soil organic carbon stock"), tags$td("Loss of organic carbon (stock, not concentration)"),
+                                                tags$td("Set by Member States"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
+
+                                        tags$tr(tags$td(colspan = 4, tags$strong(
+                                            "Part C - descriptors without criteria, monitored only (excess nutrients, acidification, topsoil compaction, biodiversity, PFAS/pesticide contamination)"
+                                        ))),
+                                        tags$tr(tags$td("Total nitrogen"), tags$td("Nutrient excess/deficiency"),
+                                                tags$td("No threshold"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓"))),
+                                        tags$tr(tags$td("Carbon/nitrogen ratio (C/N)"), tags$td("Nutrient cycling, organic matter quality"),
+                                                tags$td("No threshold"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓"))),
+                                        tags$tr(tags$td("pH"), tags$td("Acidification"),
+                                                tags$td("No threshold"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓"))),
+                                        tags$tr(tags$td("Soil biodiversity (at least one descriptor: metabarcoding, PLFA, organism abundance)"),
+                                                tags$td("Loss of soil biodiversity"),
+                                                tags$td("No threshold"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓"))),
+                                        tags$tr(tags$td("Bulk density (topsoil)"), tags$td("Topsoil compaction"),
+                                                tags$td("No threshold"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓*"))),
+                                        tags$tr(tags$td("Soil contamination (PFAS, pesticides and metabolites)"), tags$td("Emerging contaminants"),
+                                                tags$td("No threshold"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
+
+                                        tags$tr(tags$td(colspan = 4, tags$strong(
+                                            "Part D - soil sealing and soil removal indicators"
+                                        ))),
+                                        tags$tr(tags$td("Soil sealing indicator"), tags$td("Soil imperviousness"),
+                                                tags$td("Annual monitoring, no numeric threshold"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
+                                        tags$tr(tags$td("Soil removal / land take indicator"), tags$td("Land consumption"),
+                                                tags$td("Annual monitoring, no numeric threshold"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗")))
+                                    )
+                                ),
+                                p(em("* MINOTAUR records a single bulk density value that does not distinguish
+                                      topsoil from subsoil layers."))
+                            )
+                        )
+                    )
+                )
+            ) # close third tab content
         ) # close tabitem
     ) # close dashboardBody
 ) # close dashboardPage
