@@ -391,7 +391,8 @@ server <- function(input, output) {
         cor_test(!!as.symbol(input$bacteria_index_choice), !!as.symbol(input$bacteria_var_choice), method = "spearman") %>%
         as.data.frame() -> bacteria_spearman
       
-      rbind(bacteria_pearson[, -c(1, 2,6,7)], bacteria_spearman[, -c(1, 2)]) -> df_correlation_kruskal_bacteria
+      correl_cols <- c("cor", "statistic", "p", "method")
+      rbind(bacteria_pearson[, correl_cols], bacteria_spearman[, correl_cols]) -> df_correlation_kruskal_bacteria
       
       df_correlation_kruskal_bacteria
     } else if (is.character(meta_bacteria_selected[, input$bacteria_var_choice]) == T) {
@@ -704,7 +705,8 @@ server <- function(input, output) {
         cor_test(!!as.symbol(input$fungi_index_choice), !!as.symbol(input$fungi_var_choice), method = "spearman") %>%
         as.data.frame() -> fungi_spearman
 
-      rbind(fungi_pearson[, -c(1, 2, 6, 7)], fungi_spearman[, -c(1, 2)]) -> df_correlation_kruskal_fungi
+      correl_cols <- c("cor", "statistic", "p", "method")
+      rbind(fungi_pearson[, correl_cols], fungi_spearman[, correl_cols]) -> df_correlation_kruskal_fungi
 
       df_correlation_kruskal_fungi
     } else if (is.character(meta_fungi_selected[, input$fungi_var_choice]) == T) {
@@ -1103,7 +1105,8 @@ server <- function(input, output) {
         cor_test(diversity_index_value, !!as.symbol(input$meso_var_choice), method = "spearman") %>%
         as.data.frame() -> meso_spearman
 
-      rbind(meso_pearson[, -c(1, 2, 6, 7)], meso_spearman[, -c(1, 2)]) -> df_correlation_kruskal_meso
+      correl_cols <- c("cor", "statistic", "p", "method")
+      rbind(meso_pearson[, correl_cols], meso_spearman[, correl_cols]) -> df_correlation_kruskal_meso
 
       df_correlation_kruskal_meso
     } else if (is.character(meta_meso_selected[, input$meso_var_choice]) == T) {
@@ -1417,7 +1420,8 @@ server <- function(input, output) {
         cor_test(!!as.symbol(input$micro_index_choice), !!as.symbol(input$micro_var_choice), method = "spearman") %>%
         as.data.frame() -> micro_spearman
 
-      rbind(micro_pearson[, -c(1, 2, 6, 7)], micro_spearman[, -c(1, 2)]) -> df_correlation_kruskal_micro
+      correl_cols <- c("cor", "statistic", "p", "method")
+      rbind(micro_pearson[, correl_cols], micro_spearman[, correl_cols]) -> df_correlation_kruskal_micro
 
       df_correlation_kruskal_micro
     } else if (is.character(meta_micro_selected[, input$micro_var_choice]) == T) {
@@ -1569,7 +1573,7 @@ server <- function(input, output) {
           geom_point() +
           geom_smooth(method = "lm") +
           ylab("Mean Abundance") +
-          xlab(macro_var_choice) +
+          xlab(input$macro_var_choice) +
           scale_colour_manual(values = c("#E69F00", "#56B4E9", "#009E73", "#D55E00", "#CC79A7")) +
           theme_bw() -> plt14
 
@@ -1589,7 +1593,7 @@ server <- function(input, output) {
           geom_boxplot(alpha = 0.5) +
           facet_wrap(.~ecological_group, nrow = 3, ncol = 2) +
           xlab("") +
-          ylab(input$macro_index_choice) +
+          ylab("Mean Abundance") +
           theme_bw() +
           coord_flip() -> plt14
 
