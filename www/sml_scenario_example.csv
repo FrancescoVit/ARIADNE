@@ -1,0 +1,4 @@
+sample_id,ec,soc_clay,bulk_density,phosphorus,erosion,water_holding,ksat,air_capacity,soc_stock
+Example1,1.2,0.095,1.35,22,1.8,28,14,7,45
+Example2,2.8,0.06,1.62,38,4.5,19,8,4,28
+Example3,0.9,0.11,1.28,15,0.9,32,18,9,52
