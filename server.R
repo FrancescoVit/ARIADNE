@@ -1686,7 +1686,156 @@ server <- function(input, output) {
       plt15
 
     }
-    
-    
+
+
+  })
+
+  #### --- Scenario Testing tab ---####
+
+  rv_scenarios <- reactiveValues(scenarios = list(), next_id = 1)
+
+  observeEvent(input$add_scenario, {
+    if (length(rv_scenarios$scenarios) >= length(okabe_ito_palette)) return()
+    used_colors <- if (length(rv_scenarios$scenarios) > 0) {
+      sapply(rv_scenarios$scenarios, function(s) s$color_idx)
+    } else {
+      integer(0)
+    }
+    next_color_idx <- setdiff(seq_along(okabe_ito_palette), used_colors)[1]
+    new_id <- rv_scenarios$next_id
+    rv_scenarios$next_id <- rv_scenarios$next_id + 1
+    rv_scenarios$scenarios <- c(rv_scenarios$scenarios, list(list(
+      id = new_id,
+      name = paste("Scenario", new_id),
+      color_idx = next_color_idx,
+      color = okabe_ito_palette[next_color_idx]
+    )))
+  })
+
+  observeEvent(input$remove_scenario_id, {
+    rv_scenarios$scenarios <- Filter(function(s) s$id != input$remove_scenario_id, rv_scenarios$scenarios)
+  })
+
+  output$scenario_boxes <- renderUI({
+    scenarios <- rv_scenarios$scenarios
+    if (length(scenarios) == 0) {
+      return(p(em("No scenarios yet - click \"+ Add scenario\" to define your first set of national thresholds.")))
+    }
+
+    partB <- sml_scenario_variables[sml_scenario_variables$part == "B", ]
+
+    boxes <- lapply(scenarios, function(s) {
+      name_id <- paste0("scn_name_", s$id)
+      current_name <- isolate(input[[name_id]])
+      if (is.null(current_name)) current_name <- s$name
+
+      var_inputs <- lapply(seq_len(nrow(partB)), function(i) {
+        v <- partB[i, ]
+        input_id <- paste0("thr_", s$id, "_", v$id)
+        current_val <- isolate(input[[input_id]])
+        dir_symbol <- if (v$direction == "below") "healthy ≤" else "healthy ≥"
+        column(width = 4,
+          numericInput(input_id,
+            label = sprintf("%s (%s) - %s", v$label, v$unit, dir_symbol),
+            value = if (is.null(current_val)) NA else current_val,
+            min = 0)
+        )
+      })
+
+      div(style = sprintf("border-left: 6px solid %s; padding: 10px 15px; margin-bottom: 15px; background-color: #fafafa;", s$color),
+        fluidRow(
+          column(9, textInput(name_id, label = NULL, value = current_name)),
+          column(3, tags$button(class = "btn btn-danger btn-sm", type = "button",
+                                 onclick = sprintf("Shiny.setInputValue('remove_scenario_id', %d, {priority: 'event'})", s$id),
+                                 "Remove"))
+        ),
+        fluidRow(var_inputs)
+      )
+    })
+
+    tagList(boxes)
+  })
+
+  output$scenario_radar_plot <- renderPlot({
+    scenarios <- rv_scenarios$scenarios
+    validate(need(length(scenarios) > 0, "Add at least one scenario to see the plot."))
+
+    partB <- sml_scenario_variables[sml_scenario_variables$part == "B", ]
+    all_vars <- sml_scenario_variables
+    n_vars <- nrow(all_vars)
+
+    scenario_data <- lapply(scenarios, function(s) {
+      vals <- vapply(seq_len(nrow(partB)), function(i) {
+        v <- input[[paste0("thr_", s$id, "_", partB$id[i])]]
+        if (is.null(v)) NA_real_ else as.numeric(v)
+      }, numeric(1))
+      name_val <- input[[paste0("scn_name_", s$id)]]
+      list(
+        id = s$id,
+        name = if (is.null(name_val) || name_val == "") paste("Scenario", s$id) else name_val,
+        color = s$color,
+        partB_values = vals,
+        complete = !any(is.na(vals))
+      )
+    })
+
+    complete_scenarios <- Filter(function(s) s$complete, scenario_data)
+    validate(need(length(complete_scenarios) > 0,
+                  "Fill in all six Part B thresholds for at least one scenario to see the plot."))
+
+    axis_range <- lapply(seq_len(n_vars), function(i) {
+      v <- all_vars[i, ]
+      vals <- if (v$part == "A") {
+        v$fixed_value
+      } else {
+        sapply(complete_scenarios, function(s) s$partB_values[which(partB$id == v$id)])
+      }
+      rng <- range(vals, na.rm = TRUE)
+      if (diff(rng) == 0) rng <- rng + c(-1, 1) * (abs(rng[1]) * 0.1 + 0.01)
+      pad <- diff(rng) * 0.15
+      c(rng[1] - pad, rng[2] + pad)
+    })
+    names(axis_range) <- all_vars$id
+
+    normalize <- function(value, var_id) {
+      v <- all_vars[all_vars$id == var_id, ]
+      rng <- axis_range[[var_id]]
+      pos <- (value - rng[1]) / (rng[2] - rng[1])
+      if (v$direction == "above") pos <- 1 - pos
+      pmin(pmax(pos, 0), 1)
+    }
+
+    plot_df <- do.call(rbind, lapply(complete_scenarios, function(s) {
+      do.call(rbind, lapply(seq_len(n_vars), function(i) {
+        v <- all_vars[i, ]
+        raw_val <- if (v$part == "A") v$fixed_value else s$partB_values[which(partB$id == v$id)]
+        data.frame(scenario = s$name, color = s$color,
+                   variable = v$label, position = normalize(raw_val, v$id),
+                   stringsAsFactors = FALSE)
+      }))
+    }))
+    plot_df$variable <- factor(plot_df$variable, levels = all_vars$label)
+    scenario_order <- sapply(complete_scenarios, function(s) s$name)
+    plot_df$scenario <- factor(plot_df$scenario, levels = scenario_order)
+
+    color_map <- setNames(sapply(complete_scenarios, function(s) s$color), scenario_order)
+
+    p <- ggplot(plot_df, aes(x = variable, y = position, group = scenario, color = scenario, fill = scenario)) +
+      geom_polygon(alpha = 0.18, linewidth = 0) +
+      geom_path(linewidth = 1) +
+      geom_point(size = 2) +
+      scale_color_manual(values = color_map) +
+      scale_fill_manual(values = color_map) +
+      ylim(0, 1) +
+      coord_radar() +
+      theme_bw() +
+      theme(axis.title = element_blank(), axis.text.y = element_blank(),
+            legend.title = element_blank())
+
+    if (identical(input$scenario_view_mode, "facet")) {
+      p <- p + facet_wrap(~scenario) + theme(legend.position = "none")
+    }
+
+    p
   })
 }

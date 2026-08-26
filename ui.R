@@ -47,7 +47,8 @@ ui <- dashboardPage(
             menuItem("Home", tabName = "Home", icon = icon("house")),
             menuItem("Overview", tabName = "Overview", icon = icon("dashboard")),
             menuItem("Analysis", tabName = "Analysis", icon = icon("magnifying-glass-chart")),
-            menuItem("SML", tabName = "SML", icon = icon("gavel"))
+            menuItem("SML", tabName = "SML", icon = icon("gavel")),
+            menuItem("Scenario Testing", tabName = "ScenarioTesting", icon = icon("sliders"))
         )
     ),
 
@@ -702,7 +703,55 @@ ui <- dashboardPage(
                         )
                     )
                 )
-            ) # close third tab content
+            ), # close third tab content
+
+            #### --- Fourth tab content: Scenario Testing tab ---####
+            tabItem(
+                tabName = "ScenarioTesting",
+                fluidRow(
+                    box(
+                        width = 12,
+                        title = "Part A - fixed EU-level criteria",
+                        status = "primary", solidHeader = TRUE, collapsible = TRUE,
+                        p(em("Identical in every scenario - set directly by Annex I of Directive (EU) 2025/2360.
+                              Bulk density uses a single representative soil texture class (sand/loamy sand/sandy
+                              loam/loam) for this first version.")),
+                        tags$table(
+                            class = "table table-bordered table-striped",
+                            tags$thead(tags$tr(
+                                tags$th("Variable"), tags$th("Unit"), tags$th("EU value"), tags$th("Direction")
+                            )),
+                            tags$tbody(
+                                tags$tr(tags$td("Electrical conductivity"), tags$td("dS/m"), tags$td("4"), tags$td("Healthy ≤")),
+                                tags$tr(tags$td("SOC/clay ratio"), tags$td("ratio"), tags$td("0.077 (1/13)"), tags$td("Healthy ≥")),
+                                tags$tr(tags$td("Bulk density (subsoil)"), tags$td("g/cm3"), tags$td("1.80"), tags$td("Healthy ≤"))
+                            )
+                        )
+                    )
+                ),
+                fluidRow(
+                    box(
+                        width = 12,
+                        title = "Part B - your threshold scenarios",
+                        status = "primary", solidHeader = TRUE, collapsible = TRUE,
+                        actionButton("add_scenario", "+ Add scenario", icon = icon("plus")),
+                        p(em("Up to 8 scenarios (one color each). Fill in all six values for a scenario for it to
+                              appear on the plot below.")),
+                        uiOutput("scenario_boxes")
+                    )
+                ),
+                fluidRow(
+                    box(
+                        width = 12,
+                        title = "Healthy soil space",
+                        status = "primary", solidHeader = TRUE, collapsible = TRUE,
+                        radioButtons("scenario_view_mode", label = NULL,
+                                     choices = c("Overlay" = "overlay", "Side by side" = "facet"),
+                                     selected = "overlay", inline = TRUE),
+                        plotOutput("scenario_radar_plot", height = "600px")
+                    )
+                )
+            ) # close fourth tab content
         ) # close tabitem
     ) # close dashboardBody
 ) # close dashboardPage

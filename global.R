@@ -166,3 +166,50 @@ common_vars <- c(
   "OC" = "organic_carbon"
 )
 
+######################################################################################################
+## --- SML scenario testing: variable definitions ---##
+######################################################################################################
+# Single source of truth for the "Scenario Testing" tab (SML Annex I thresholds).
+# Both the input UI and the radar plot read from this table, so adding a future axis
+# is a matter of adding one row here.
+#
+# direction: "below" = healthy when value < threshold; "above" = healthy when value > threshold
+# fixed_value: for Part A rows only (EU-mandated, identical across every scenario)
+# minotaur_column: NOT used yet - placeholder for a future feature that would classify actual
+#   MINOTAUR samples as healthy/unhealthy per scenario. NA where MINOTAUR has no equivalent
+#   variable (verified against the raw data_source/*.csv headers, not the app's curated subset).
+
+sml_scenario_variables <- data.frame(
+  id = c("ec", "soc_clay", "bulk_density",
+         "phosphorus", "erosion", "water_holding", "ksat", "air_capacity", "soc_stock"),
+  label = c("Electrical conductivity", "SOC/clay ratio", "Bulk density (subsoil)",
+            "Extractable phosphorus", "Soil erosion rate", "Water holding capacity",
+            "Saturated hydraulic conductivity", "Air capacity", "SOC stock"),
+  unit = c("dS/m", "ratio", "g/cm3",
+           "mg/kg", "t/ha/yr", "%", "cm/day", "%", "tC/ha"),
+  part = c("A", "A", "A",
+           "B", "B", "B", "B", "B", "B"),
+  direction = c("below", "above", "below",
+                "below", "below", "above", "above", "above", "above"),
+  fixed_value = c(4, 1 / 13, 1.80,
+                  NA, NA, NA, NA, NA, NA),
+  minotaur_column = c(NA, NA, "bulk_density",
+                       "phosphorus_available", NA, NA, NA, NA, NA),
+  stringsAsFactors = FALSE
+)
+
+# Okabe-Ito colorblind-safe qualitative palette (already used elsewhere in this app
+# for the macrofauna ecological-group plots) - 8 colors, so scenarios are capped at 8.
+okabe_ito_palette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442",
+                        "#0072B2", "#D55E00", "#CC79A7", "#000000")
+
+# ggplot2 has no built-in radar/spider coordinate system; this is the standard
+# recipe (coord_polar with straight, not curved, grid lines between axes).
+coord_radar <- function(theta = "x", start = 0, direction = 1) {
+  theta <- match.arg(theta, c("x", "y"))
+  r <- if (theta == "x") "y" else "x"
+  ggproto("CoordRadar", CoordPolar, theta = theta, r = r,
+          start = start, direction = sign(direction),
+          is_linear = function(coord) TRUE)
+}
+
