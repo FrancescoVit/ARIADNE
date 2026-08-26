@@ -47,8 +47,7 @@ ui <- dashboardPage(
             menuItem("Home", tabName = "Home", icon = icon("house")),
             menuItem("Overview", tabName = "Overview", icon = icon("dashboard")),
             menuItem("Analysis", tabName = "Analysis", icon = icon("magnifying-glass-chart")),
-            menuItem("SML", tabName = "SML", icon = icon("gavel")),
-            menuItem("Scenario Testing", tabName = "ScenarioTesting", icon = icon("sliders"))
+            menuItem("SML", tabName = "SML", icon = icon("gavel"))
         )
     ),
 
@@ -699,16 +698,12 @@ ui <- dashboardPage(
                                       requires each Member State to set the actual numeric maximum, minimum or
                                       threshold value; for Part A, the numeric criteria shown above are fixed
                                       directly in Annex I of the Directive itself."))
-                            )
-                        )
-                    )
-                )
-            ), # close third tab content
+                            ), # close General Information tabPanel
 
-            #### --- Fourth tab content: Scenario Testing tab ---####
-            tabItem(
-                tabName = "ScenarioTesting",
-                fluidRow(
+                            #### --- Scenario Testing panel ---####
+                            tabPanel(
+                                title = "Scenario Testing", value = "t_sml_scenario",
+                                fluidRow(
                     box(
                         width = 12,
                         title = "Part A - fixed EU-level criteria",
@@ -751,7 +746,11 @@ ui <- dashboardPage(
                         plotOutput("scenario_radar_plot", height = "600px")
                     )
                 )
-            ) # close fourth tab content
+                            ) # close Scenario Testing tabPanel
+                        ) # close Tabsetpanel
+                    ) # close box
+                ) # close fluidrow
+            ) # close third tab content
         ) # close tabitem
     ) # close dashboardBody
 ) # close dashboardPage
