@@ -1716,6 +1716,47 @@ server <- function(input, output) {
     rv_scenarios$scenarios <- Filter(function(s) s$id != input$remove_scenario_id, rv_scenarios$scenarios)
   })
 
+  current_scenario_name <- function(s) {
+    name_val <- input[[paste0("scn_name_", s$id)]]
+    if (is.null(name_val) || identical(name_val, "")) paste("Scenario", s$id) else name_val
+  }
+
+  # Uploaded samples are read straight from the temp path Shiny gives the file -
+  # never written anywhere else, never persisted beyond this session.
+  uploaded_samples <- reactive({
+    req(input$sample_upload)
+    tryCatch(
+      utils::read.csv(input$sample_upload$datapath, stringsAsFactors = FALSE),
+      error = function(e) NULL
+    )
+  })
+
+  output$sample_upload_warnings <- renderUI({
+    df <- uploaded_samples()
+    if (is.null(df)) return(NULL)
+
+    msgs <- list()
+    if (!"sample_id" %in% colnames(df)) {
+      msgs <- c(msgs, list(p(style = "color:#c62828;",
+        "No \"sample_id\" column found - rows will be labeled Row 1, Row 2, ...")))
+    }
+    missing_cols <- setdiff(sml_scenario_variables$id, colnames(df))
+    if (length(missing_cols) > 0) {
+      msgs <- c(msgs, list(p(style = "color:#c62828;",
+        sprintf("Missing columns (treated as not available for every sample): %s",
+                paste(missing_cols, collapse = ", ")))))
+    }
+    unknown_cols <- setdiff(colnames(df), c("sample_id", sml_scenario_variables$id))
+    if (length(unknown_cols) > 0) {
+      msgs <- c(msgs, list(p(style = "color:#888;",
+        sprintf("Unrecognized columns ignored: %s", paste(unknown_cols, collapse = ", ")))))
+    }
+    if (length(msgs) == 0) {
+      msgs <- list(p(style = "color:#2e7d32;", sprintf("%d sample(s) loaded.", nrow(df))))
+    }
+    tagList(msgs)
+  })
+
   output$scenario_boxes <- renderUI({
     scenarios <- rv_scenarios$scenarios
     if (length(scenarios) == 0) {
@@ -1769,10 +1810,9 @@ server <- function(input, output) {
         v <- input[[paste0("thr_", s$id, "_", partB$id[i])]]
         if (is.null(v)) NA_real_ else as.numeric(v)
       }, numeric(1))
-      name_val <- input[[paste0("scn_name_", s$id)]]
       list(
         id = s$id,
-        name = if (is.null(name_val) || name_val == "") paste("Scenario", s$id) else name_val,
+        name = current_scenario_name(s),
         color = s$color,
         partB_values = vals,
         complete = !any(is.na(vals))
@@ -1832,10 +1872,101 @@ server <- function(input, output) {
       theme(axis.title = element_blank(), axis.text.y = element_blank(),
             legend.title = element_blank())
 
+    # Uploaded sample points: skip (not clamp) anything missing or outside the
+    # scenario-derived axis range - this only affects what CAN be drawn, the
+    # classification table evaluates every value regardless of plot range.
+    samples_df <- uploaded_samples()
+    if (!is.null(samples_df) && nrow(samples_df) > 0) {
+      sample_ids <- if ("sample_id" %in% colnames(samples_df)) {
+        as.character(samples_df$sample_id)
+      } else {
+        paste("Row", seq_len(nrow(samples_df)))
+      }
+      point_rows <- do.call(rbind, lapply(seq_len(nrow(samples_df)), function(r) {
+        do.call(rbind, lapply(seq_len(n_vars), function(i) {
+          v <- all_vars[i, ]
+          if (!(v$id %in% colnames(samples_df))) return(NULL)
+          raw_val <- suppressWarnings(as.numeric(samples_df[[v$id]][r]))
+          if (is.na(raw_val)) return(NULL)
+          rng <- axis_range[[v$id]]
+          if (raw_val < rng[1] || raw_val > rng[2]) return(NULL)
+          data.frame(sample = sample_ids[r], variable = v$label,
+                     position = normalize(raw_val, v$id), stringsAsFactors = FALSE)
+        }))
+      }))
+      if (!is.null(point_rows) && nrow(point_rows) > 0) {
+        point_rows$variable <- factor(point_rows$variable, levels = all_vars$label)
+        p <- p + geom_point(data = point_rows, aes(x = variable, y = position, group = sample),
+                             inherit.aes = FALSE, shape = 21, size = 3,
+                             color = "black", fill = "white", stroke = 1.2)
+      }
+    }
+
     if (identical(input$scenario_view_mode, "facet")) {
       p <- p + facet_wrap(~scenario) + theme(legend.position = "none")
     }
 
     p
+  })
+
+  output$sample_classification_table <- renderUI({
+    df <- uploaded_samples()
+    validate(need(!is.null(df) && nrow(df) > 0, "Upload a CSV to see the classification table."))
+    scenarios <- rv_scenarios$scenarios
+    validate(need(length(scenarios) > 0, "Add at least one scenario to classify samples against."))
+
+    sample_ids <- if ("sample_id" %in% colnames(df)) as.character(df$sample_id) else paste("Row", seq_len(nrow(df)))
+    all_vars <- sml_scenario_variables
+
+    flag_symbol <- function(status) {
+      if (status == "healthy") {
+        tags$span(style = "color:#2e7d32; font-weight:bold;", "✓")
+      } else if (status == "unhealthy") {
+        tags$span(style = "color:#c62828; font-weight:bold;", "✗")
+      } else {
+        tags$span(style = "color:#9e9e9e;", "–")
+      }
+    }
+
+    blocks <- lapply(scenarios, function(s) {
+      header_row <- tags$tr(tags$td(colspan = nrow(all_vars) + 2,
+        style = sprintf("background-color:%s; color:#ffffff; font-weight:bold; padding:8px;", s$color),
+        current_scenario_name(s)))
+      var_header <- tags$tr(
+        tags$th("Sample"),
+        lapply(seq_len(nrow(all_vars)), function(i) tags$th(all_vars$label[i])),
+        tags$th("Healthy / Unhealthy / Undetermined")
+      )
+      body_rows <- lapply(seq_len(nrow(df)), function(r) {
+        counts <- c(healthy = 0, unhealthy = 0, undetermined = 0)
+        cells <- lapply(seq_len(nrow(all_vars)), function(i) {
+          v <- all_vars[i, ]
+          val <- if (v$id %in% colnames(df)) suppressWarnings(as.numeric(df[[v$id]][r])) else NA_real_
+          thr <- if (v$part == "A") {
+            v$fixed_value
+          } else {
+            tv <- input[[paste0("thr_", s$id, "_", v$id)]]
+            if (is.null(tv)) NA_real_ else as.numeric(tv)
+          }
+          status <- if (is.na(val) || is.na(thr)) {
+            "undetermined"
+          } else if (v$direction == "below") {
+            if (val <= thr) "healthy" else "unhealthy"
+          } else {
+            if (val >= thr) "healthy" else "unhealthy"
+          }
+          counts[status] <<- counts[status] + 1
+          tags$td(align = "center", flag_symbol(status))
+        })
+        tags$tr(
+          tags$td(sample_ids[r]),
+          cells,
+          tags$td(sprintf("%d / %d / %d", counts["healthy"], counts["unhealthy"], counts["undetermined"]))
+        )
+      })
+      tagList(header_row, var_header, body_rows)
+    })
+
+    tags$table(class = "table table-bordered table-striped", tags$tbody(blocks))
   })
 }

@@ -738,12 +738,38 @@ ui <- dashboardPage(
                 fluidRow(
                     box(
                         width = 12,
+                        title = "Upload your own samples (session-only, never saved)",
+                        status = "primary", solidHeader = TRUE, collapsible = TRUE,
+                        p(em("Optional. Upload a CSV of your own samples to plot them as points against the
+                              scenarios above. The file is only held in your browser session - it is never
+                              written to disk or shared, and disappears when the session ends.")),
+                        tags$a(href = "sml_scenario_template.csv", download = NA,
+                               icon("download"), " Download CSV template"),
+                        br(), br(),
+                        fileInput("sample_upload", "Upload CSV", accept = ".csv"),
+                        uiOutput("sample_upload_warnings")
+                    )
+                ),
+                fluidRow(
+                    box(
+                        width = 12,
                         title = "Healthy soil space",
                         status = "primary", solidHeader = TRUE, collapsible = TRUE,
                         radioButtons("scenario_view_mode", label = NULL,
                                      choices = c("Overlay" = "overlay", "Side by side" = "facet"),
                                      selected = "overlay", inline = TRUE),
                         plotOutput("scenario_radar_plot", height = "600px")
+                    )
+                ),
+                fluidRow(
+                    box(
+                        width = 12,
+                        title = "Sample classification per scenario",
+                        status = "primary", solidHeader = TRUE, collapsible = TRUE,
+                        p(em("For each uploaded sample and each scenario: green = meets that variable's threshold,
+                              red = fails it, grey = variable not available for that sample. The last column
+                              counts healthy/unhealthy/undetermined variables for that sample under that scenario.")),
+                        uiOutput("sample_classification_table")
                     )
                 )
                             ) # close Scenario Testing tabPanel
