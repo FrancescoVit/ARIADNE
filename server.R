@@ -1724,7 +1724,12 @@ server <- function(input, output) {
   # Uploaded samples are read straight from the temp path Shiny gives the file -
   # never written anywhere else, never persisted beyond this session.
   uploaded_samples <- reactive({
-    req(input$sample_upload)
+    # NOT req(): req()'s silent-stop would abort the ENTIRE render of any output
+    # that calls this reactive (e.g. scenario_radar_plot), not just the part that
+    # needs the upload - meaning the scenario polygons would vanish too whenever
+    # no file had been uploaded yet. Returning NULL lets each caller decide how
+    # to handle "nothing uploaded" (they already all check for it).
+    if (is.null(input$sample_upload)) return(NULL)
     tryCatch(
       utils::read.csv(input$sample_upload$datapath, stringsAsFactors = FALSE),
       error = function(e) NULL
@@ -1876,7 +1881,7 @@ server <- function(input, output) {
       scale_y_continuous(limits = c(0, zoom_max), oob = scales::squish) +
       coord_radar() +
       theme_bw() +
-      theme(axis.title = element_blank(), axis.text.y = element_text(size = 7, color = "grey40"),
+      theme(axis.title = element_blank(), axis.text.y = element_text(size = 10, face = "bold", color = "grey30"),
             legend.title = element_blank())
 
     # Uploaded sample points: skip (not clamp) anything missing or outside the
