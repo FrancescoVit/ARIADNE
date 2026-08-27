@@ -1897,8 +1897,8 @@ server <- function(input, output) {
       if (!is.null(point_rows) && nrow(point_rows) > 0) {
         point_rows$variable <- factor(point_rows$variable, levels = all_vars$label)
         p <- p + geom_point(data = point_rows, aes(x = variable, y = position, group = sample),
-                             inherit.aes = FALSE, shape = 21, size = 3,
-                             color = "black", fill = "white", stroke = 1.2)
+                             inherit.aes = FALSE, shape = 1, size = 2.2,
+                             color = "black", stroke = 0.9)
       }
     }
 
