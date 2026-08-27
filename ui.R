@@ -761,6 +761,8 @@ ui <- dashboardPage(
                         radioButtons("scenario_view_mode", label = NULL,
                                      choices = c("Overlay" = "overlay", "Side by side" = "facet"),
                                      selected = "overlay", inline = TRUE),
+                        sliderInput("scenario_radius_zoom", "Zoom (radius range shown)",
+                                    min = 0, max = 1, value = c(0, 1), step = 0.05),
                         plotOutput("scenario_radar_plot", height = "600px")
                     )
                 ),
