@@ -1860,8 +1860,8 @@ server <- function(input, output) {
 
     color_map <- setNames(sapply(complete_scenarios, function(s) s$color), scenario_order)
 
-    zoom_range <- input$scenario_radius_zoom
-    if (is.null(zoom_range) || diff(zoom_range) <= 0) zoom_range <- c(0, 1)
+    zoom_max <- input$scenario_radius_zoom
+    if (is.null(zoom_max) || zoom_max <= 0) zoom_max <- 1
 
     p <- ggplot(plot_df, aes(x = variable, y = position, group = scenario, color = scenario, fill = scenario)) +
       geom_polygon(alpha = 0.18, linewidth = 0) +
@@ -1869,10 +1869,14 @@ server <- function(input, output) {
       geom_point(size = 2) +
       scale_color_manual(values = color_map) +
       scale_fill_manual(values = color_map) +
-      ylim(zoom_range[1], zoom_range[2]) +
+      # scales::squish clamps out-of-range vertices to the visible edge instead of
+      # dropping them to NA (ylim()'s default) - a polygon needs every vertex to
+      # draw at all, so dropping any one of them made the whole shape/fill vanish
+      # as soon as the zoom excluded a single vertex.
+      scale_y_continuous(limits = c(0, zoom_max), oob = scales::squish) +
       coord_radar() +
       theme_bw() +
-      theme(axis.title = element_blank(), axis.text.y = element_blank(),
+      theme(axis.title = element_blank(), axis.text.y = element_text(size = 7, color = "grey40"),
             legend.title = element_blank())
 
     # Uploaded sample points: skip (not clamp) anything missing or outside the
