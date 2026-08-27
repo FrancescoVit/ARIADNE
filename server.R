@@ -1828,14 +1828,26 @@ server <- function(input, output) {
     validate(need(length(complete_scenarios) > 0,
                   "Fill in all six Part B thresholds for at least one scenario to see the plot."))
 
+    # Computed once here (not just down where points are drawn) because the axis
+    # range itself needs to account for uploaded values - otherwise a sample could
+    # flicker in/out of view purely because scenarios changed, even though its own
+    # value never did. The range is still allowed to shift as scenarios are added/
+    # removed/edited; it just always includes whatever samples are currently loaded.
+    samples_df <- uploaded_samples()
+
     axis_range <- lapply(seq_len(n_vars), function(i) {
       v <- all_vars[i, ]
-      vals <- if (v$part == "A") {
+      scenario_vals <- if (v$part == "A") {
         v$fixed_value
       } else {
         sapply(complete_scenarios, function(s) s$partB_values[which(partB$id == v$id)])
       }
-      rng <- range(vals, na.rm = TRUE)
+      sample_vals <- if (!is.null(samples_df) && v$id %in% colnames(samples_df)) {
+        suppressWarnings(as.numeric(samples_df[[v$id]]))
+      } else {
+        numeric(0)
+      }
+      rng <- range(c(scenario_vals, sample_vals), na.rm = TRUE)
       if (diff(rng) == 0) rng <- rng + c(-1, 1) * (abs(rng[1]) * 0.1 + 0.01)
       pad <- diff(rng) * 0.15
       c(rng[1] - pad, rng[2] + pad)
@@ -1885,9 +1897,9 @@ server <- function(input, output) {
             legend.title = element_blank())
 
     # Uploaded sample points: skip (not clamp) anything missing or outside the
-    # scenario-derived axis range - this only affects what CAN be drawn, the
-    # classification table evaluates every value regardless of plot range.
-    samples_df <- uploaded_samples()
+    # axis range (which, per above, already accounts for every loaded sample) -
+    # this only affects what CAN be drawn, the classification table evaluates
+    # every value regardless of plot range.
     if (!is.null(samples_df) && nrow(samples_df) > 0) {
       sample_ids <- if ("sample_id" %in% colnames(samples_df)) {
         as.character(samples_df$sample_id)
