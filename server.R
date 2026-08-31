@@ -1736,6 +1736,107 @@ server <- function(input, output) {
     )
   })
 
+  n_uploaded <- reactive({
+    df <- uploaded_samples()
+    if (is.null(df)) 0 else nrow(df)
+  })
+
+  output$scenario_plot_type_selector <- renderUI({
+    n <- n_uploaded()
+    if (n > 20) {
+      choices <- c("Histogram" = "histogram", "Violin" = "violin")
+      default <- "histogram"
+    } else {
+      choices <- c("Radar" = "radar", "Histogram" = "histogram", "Violin" = "violin")
+      default <- "radar"
+    }
+    # Preserve the user's current choice across re-renders (e.g. a new upload
+    # crossing the n=20 line) if it's still valid; only fall back to the
+    # size-appropriate default when it isn't (or hasn't been chosen yet).
+    current <- isolate(input$scenario_plot_type)
+    selected <- if (!is.null(current) && current %in% choices) current else default
+    radioButtons("scenario_plot_type", "Plot type", choices = choices, selected = selected, inline = TRUE)
+  })
+
+  # Long-format sample values, one row per (sample, variable) - feeds the
+  # histogram/violin plots. Not used by the radar, which only needs positions.
+  sample_values_long <- reactive({
+    df <- uploaded_samples()
+    validate(need(!is.null(df) && nrow(df) > 0, "Upload a CSV to see this view."))
+    all_vars <- sml_scenario_variables
+    rows <- lapply(seq_len(nrow(all_vars)), function(i) {
+      v <- all_vars[i, ]
+      vals <- if (v$id %in% colnames(df)) suppressWarnings(as.numeric(df[[v$id]])) else rep(NA_real_, nrow(df))
+      data.frame(variable = v$label, value = vals, stringsAsFactors = FALSE)
+    })
+    out <- do.call(rbind, rows)
+    out$variable <- factor(out$variable, levels = all_vars$label)
+    out
+  })
+
+  # Long-format threshold value per (scenario, variable) - feeds the colored
+  # threshold lines on the histogram/violin plots.
+  scenario_thresholds_long <- reactive({
+    scenarios <- rv_scenarios$scenarios
+    validate(need(length(scenarios) > 0, "Add at least one scenario to see threshold lines."))
+    all_vars <- sml_scenario_variables
+    rows <- lapply(scenarios, function(s) {
+      do.call(rbind, lapply(seq_len(nrow(all_vars)), function(i) {
+        v <- all_vars[i, ]
+        thr <- if (v$part == "A") {
+          v$fixed_value
+        } else {
+          tv <- input[[paste0("thr_", s$id, "_", v$id)]]
+          if (is.null(tv)) NA_real_ else as.numeric(tv)
+        }
+        data.frame(variable = v$label, scenario = current_scenario_name(s),
+                   color = s$color, thr = thr, stringsAsFactors = FALSE)
+      }))
+    })
+    out <- do.call(rbind, rows)
+    out$variable <- factor(out$variable, levels = all_vars$label)
+    out
+  })
+
+  # Single source of truth for per-sample x per-variable x per-scenario
+  # healthy/unhealthy/undetermined status - used by both the aggregated and
+  # detailed classification tables (previously duplicated between them).
+  sample_classification <- reactive({
+    df <- uploaded_samples()
+    validate(need(!is.null(df) && nrow(df) > 0, "Upload a CSV to see classification results."))
+    scenarios <- rv_scenarios$scenarios
+    validate(need(length(scenarios) > 0, "Add at least one scenario to classify samples against."))
+
+    sample_ids <- if ("sample_id" %in% colnames(df)) as.character(df$sample_id) else paste("Row", seq_len(nrow(df)))
+    all_vars <- sml_scenario_variables
+
+    rows <- lapply(scenarios, function(s) {
+      do.call(rbind, lapply(seq_len(nrow(df)), function(r) {
+        do.call(rbind, lapply(seq_len(nrow(all_vars)), function(i) {
+          v <- all_vars[i, ]
+          val <- if (v$id %in% colnames(df)) suppressWarnings(as.numeric(df[[v$id]][r])) else NA_real_
+          thr <- if (v$part == "A") {
+            v$fixed_value
+          } else {
+            tv <- input[[paste0("thr_", s$id, "_", v$id)]]
+            if (is.null(tv)) NA_real_ else as.numeric(tv)
+          }
+          status <- if (is.na(val) || is.na(thr)) {
+            "undetermined"
+          } else if (v$direction == "below") {
+            if (val <= thr) "healthy" else "unhealthy"
+          } else {
+            if (val >= thr) "healthy" else "unhealthy"
+          }
+          data.frame(scenario_id = s$id, scenario_name = current_scenario_name(s), scenario_color = s$color,
+                     sample_id = sample_ids[r], variable_id = v$id, variable_label = v$label,
+                     status = status, stringsAsFactors = FALSE)
+        }))
+      }))
+    })
+    do.call(rbind, rows)
+  })
+
   output$sample_upload_warnings <- renderUI({
     df <- uploaded_samples()
     if (is.null(df)) return(NULL)
@@ -1803,6 +1904,43 @@ server <- function(input, output) {
   })
 
   output$scenario_radar_plot <- renderPlot({
+    plot_type <- input$scenario_plot_type
+    if (is.null(plot_type)) plot_type <- if (n_uploaded() > 20) "histogram" else "radar"
+
+    if (plot_type %in% c("histogram", "violin")) {
+      # Multiple scenarios don't map to radar's overlay/facet toggle here - each
+      # variable panel just gets one colored dashed line per scenario, which is
+      # simpler and avoids a variables x scenarios facet grid getting huge.
+      vals <- sample_values_long()
+      thr <- scenario_thresholds_long()
+      color_lookup <- unique(thr[, c("scenario", "color")])
+      color_vec <- setNames(color_lookup$color, color_lookup$scenario)
+
+      if (plot_type == "histogram") {
+        ggplot(vals, aes(x = value)) +
+          geom_histogram(bins = 15, fill = "#2C7FB8", alpha = 0.7, color = "white", na.rm = TRUE) +
+          geom_vline(data = thr, aes(xintercept = thr, color = scenario),
+                     linetype = "dashed", linewidth = 0.8, na.rm = TRUE) +
+          scale_color_manual(values = color_vec) +
+          facet_wrap(~variable, scales = "free_x", ncol = 3) +
+          theme_bw() +
+          theme(strip.text = element_text(size = 9), legend.title = element_blank()) +
+          labs(x = NULL, y = "count")
+      } else {
+        ggplot(vals, aes(x = 1, y = value)) +
+          geom_violin(fill = "#2C7FB8", alpha = 0.5, color = "#2C7FB8", trim = FALSE, na.rm = TRUE) +
+          geom_jitter(width = 0.15, height = 0, alpha = 0.3, size = 0.8, na.rm = TRUE) +
+          geom_hline(data = thr, aes(yintercept = thr, color = scenario),
+                     linetype = "dashed", linewidth = 0.8, na.rm = TRUE) +
+          scale_color_manual(values = color_vec) +
+          facet_wrap(~variable, scales = "free_y", ncol = 3) +
+          theme_bw() +
+          theme(strip.text = element_text(size = 9), axis.text.x = element_blank(),
+                axis.ticks.x = element_blank(), legend.title = element_blank()) +
+          labs(x = NULL, y = NULL)
+      }
+
+    } else {
     scenarios <- rv_scenarios$scenarios
     validate(need(length(scenarios) > 0, "Add at least one scenario to see the plot."))
 
@@ -1931,16 +2069,13 @@ server <- function(input, output) {
     }
 
     p
+    }
   })
 
   output$sample_classification_table <- renderUI({
-    df <- uploaded_samples()
-    validate(need(!is.null(df) && nrow(df) > 0, "Upload a CSV to see the classification table."))
-    scenarios <- rv_scenarios$scenarios
-    validate(need(length(scenarios) > 0, "Add at least one scenario to classify samples against."))
-
-    sample_ids <- if ("sample_id" %in% colnames(df)) as.character(df$sample_id) else paste("Row", seq_len(nrow(df)))
+    cls <- sample_classification()
     all_vars <- sml_scenario_variables
+    scenario_ids <- unique(cls$scenario_id)  # preserves add-order (cls is built in that order)
 
     flag_symbol <- function(status) {
       if (status == "healthy") {
@@ -1952,45 +2087,84 @@ server <- function(input, output) {
       }
     }
 
-    blocks <- lapply(scenarios, function(s) {
-      header_row <- tags$tr(tags$td(colspan = nrow(all_vars) + 2,
-        style = sprintf("background-color:%s; color:#ffffff; font-weight:bold; padding:8px;", s$color),
-        current_scenario_name(s)))
-      var_header <- tags$tr(
-        tags$th("Sample"),
-        lapply(seq_len(nrow(all_vars)), function(i) tags$th(all_vars$label[i])),
-        tags$th("Healthy / Unhealthy / Undetermined")
-      )
-      body_rows <- lapply(seq_len(nrow(df)), function(r) {
-        counts <- c(healthy = 0, unhealthy = 0, undetermined = 0)
-        cells <- lapply(seq_len(nrow(all_vars)), function(i) {
-          v <- all_vars[i, ]
-          val <- if (v$id %in% colnames(df)) suppressWarnings(as.numeric(df[[v$id]][r])) else NA_real_
-          thr <- if (v$part == "A") {
-            v$fixed_value
-          } else {
-            tv <- input[[paste0("thr_", s$id, "_", v$id)]]
-            if (is.null(tv)) NA_real_ else as.numeric(tv)
-          }
-          status <- if (is.na(val) || is.na(thr)) {
-            "undetermined"
-          } else if (v$direction == "below") {
-            if (val <= thr) "healthy" else "unhealthy"
-          } else {
-            if (val >= thr) "healthy" else "unhealthy"
-          }
-          counts[status] <<- counts[status] + 1
-          tags$td(align = "center", flag_symbol(status))
-        })
-        tags$tr(
-          tags$td(sample_ids[r]),
-          cells,
-          tags$td(sprintf("%d / %d / %d", counts["healthy"], counts["unhealthy"], counts["undetermined"]))
-        )
-      })
-      tagList(header_row, var_header, body_rows)
-    })
+    view_mode <- input$sample_table_view_mode
+    if (is.null(view_mode)) view_mode <- "aggregated"
 
-    tags$table(class = "table table-bordered table-striped", tags$tbody(blocks))
+    if (view_mode == "aggregated") {
+      blocks <- lapply(scenario_ids, function(sid) {
+        sub <- cls[cls$scenario_id == sid, ]
+        header_row <- tags$tr(tags$td(colspan = 5,
+          style = sprintf("background-color:%s; color:#ffffff; font-weight:bold; padding:8px;", sub$scenario_color[1]),
+          sub$scenario_name[1]))
+        var_header <- tags$tr(tags$th("Variable"), tags$th("Healthy"), tags$th("Unhealthy"),
+                               tags$th("Undetermined"), tags$th("% Healthy"))
+
+        var_rows <- lapply(seq_len(nrow(all_vars)), function(i) {
+          v <- all_vars[i, ]
+          sub_v <- sub[sub$variable_id == v$id, ]
+          healthy <- sum(sub_v$status == "healthy")
+          unhealthy <- sum(sub_v$status == "unhealthy")
+          undetermined <- sum(sub_v$status == "undetermined")
+          # % excludes undetermined from the denominator - a genuinely unevaluated
+          # sample shouldn't dilute a "% compliant" figure either way.
+          pct <- if ((healthy + unhealthy) > 0) sprintf("%.0f%%", 100 * healthy / (healthy + unhealthy)) else "-"
+          tags$tr(
+            tags$td(v$label),
+            tags$td(align = "center", style = "color:#2e7d32;", healthy),
+            tags$td(align = "center", style = "color:#c62828;", unhealthy),
+            tags$td(align = "center", style = "color:#9e9e9e;", undetermined),
+            tags$td(align = "center", pct)
+          )
+        })
+
+        total_healthy <- sum(sub$status == "healthy")
+        total_unhealthy <- sum(sub$status == "unhealthy")
+        total_undetermined <- sum(sub$status == "undetermined")
+        total_pct <- if ((total_healthy + total_unhealthy) > 0) {
+          sprintf("%.0f%%", 100 * total_healthy / (total_healthy + total_unhealthy))
+        } else {
+          "-"
+        }
+        total_row <- tags$tr(style = "font-weight:bold; background-color:#f0f0f0;",
+          tags$td("Total"),
+          tags$td(align = "center", total_healthy),
+          tags$td(align = "center", total_unhealthy),
+          tags$td(align = "center", total_undetermined),
+          tags$td(align = "center", total_pct)
+        )
+
+        tagList(header_row, var_header, var_rows, total_row)
+      })
+
+      tags$table(class = "table table-bordered table-striped", tags$tbody(blocks))
+
+    } else {
+      sample_ids <- unique(cls$sample_id)  # preserves upload row order
+      blocks <- lapply(scenario_ids, function(sid) {
+        sub <- cls[cls$scenario_id == sid, ]
+        header_row <- tags$tr(tags$td(colspan = nrow(all_vars) + 2,
+          style = sprintf("background-color:%s; color:#ffffff; font-weight:bold; padding:8px;", sub$scenario_color[1]),
+          sub$scenario_name[1]))
+        var_header <- tags$tr(
+          tags$th("Sample"),
+          lapply(seq_len(nrow(all_vars)), function(i) tags$th(all_vars$label[i])),
+          tags$th("Healthy / Unhealthy / Undetermined")
+        )
+        body_rows <- lapply(sample_ids, function(sample_id) {
+          sub_s <- sub[sub$sample_id == sample_id, ]
+          sub_s <- sub_s[match(all_vars$id, sub_s$variable_id), ]
+          cells <- lapply(seq_len(nrow(sub_s)), function(i) tags$td(align = "center", flag_symbol(sub_s$status[i])))
+          counts <- table(factor(sub_s$status, levels = c("healthy", "unhealthy", "undetermined")))
+          tags$tr(
+            tags$td(sample_id),
+            cells,
+            tags$td(sprintf("%d / %d / %d", counts["healthy"], counts["unhealthy"], counts["undetermined"]))
+          )
+        })
+        tagList(header_row, var_header, body_rows)
+      })
+
+      tags$table(class = "table table-bordered table-striped", tags$tbody(blocks))
+    }
   })
 }

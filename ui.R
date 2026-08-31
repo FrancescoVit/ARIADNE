@@ -758,11 +758,19 @@ ui <- dashboardPage(
                         width = 12,
                         title = "Healthy soil space",
                         status = "primary", solidHeader = TRUE, collapsible = TRUE,
-                        radioButtons("scenario_view_mode", label = NULL,
-                                     choices = c("Overlay" = "overlay", "Side by side" = "facet"),
-                                     selected = "overlay", inline = TRUE),
-                        sliderInput("scenario_radius_zoom", "Adjust max plot radius",
-                                    min = 0.05, max = 1, value = 1, step = 0.05),
+                        uiOutput("scenario_plot_type_selector"),
+                        conditionalPanel(
+                            condition = "input.scenario_plot_type == 'radar' || input.scenario_plot_type == null",
+                            radioButtons("scenario_view_mode", label = NULL,
+                                         choices = c("Overlay" = "overlay", "Side by side" = "facet"),
+                                         selected = "overlay", inline = TRUE),
+                            sliderInput("scenario_radius_zoom", "Adjust max plot radius",
+                                        min = 0.05, max = 1, value = 1, step = 0.05)
+                        ),
+                        conditionalPanel(
+                            condition = "input.scenario_plot_type == 'histogram' || input.scenario_plot_type == 'violin'",
+                            p(em("Dashed lines mark each scenario's threshold (same colors as its legend)."))
+                        ),
                         plotOutput("scenario_radar_plot", height = "600px")
                     )
                 ),
@@ -771,9 +779,21 @@ ui <- dashboardPage(
                         width = 12,
                         title = "Sample classification per scenario",
                         status = "primary", solidHeader = TRUE, collapsible = TRUE,
-                        p(em("For each uploaded sample and each scenario: green = meets that variable's threshold,
-                              red = fails it, grey = variable not available for that sample. The last column
-                              counts healthy/unhealthy/undetermined variables for that sample under that scenario.")),
+                        radioButtons("sample_table_view_mode", label = NULL,
+                                     choices = c("Aggregated" = "aggregated", "Detailed" = "detailed"),
+                                     selected = "aggregated", inline = TRUE),
+                        conditionalPanel(
+                            condition = "input.sample_table_view_mode == 'aggregated' || input.sample_table_view_mode == null",
+                            p(em("Per scenario, per variable: how many uploaded samples meet that variable's
+                                  threshold (green), fail it (red), or can't be evaluated (grey) - plus the
+                                  totals and overall % healthy (undetermined samples excluded from that %)."))
+                        ),
+                        conditionalPanel(
+                            condition = "input.sample_table_view_mode == 'detailed'",
+                            p(em("For each uploaded sample and each scenario: green = meets that variable's threshold,
+                                  red = fails it, grey = variable not available for that sample. The last column
+                                  counts healthy/unhealthy/undetermined variables for that sample under that scenario."))
+                        ),
                         uiOutput("sample_classification_table")
                     )
                 )
