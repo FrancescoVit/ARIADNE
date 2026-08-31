@@ -1,5 +1,5 @@
 # shARed mInotAur Database exploratioN Environment : ARIADNE
-# Version: 4.1.1
+# Version: 4.2
 # Author:
 # Francesco Vitali §
 # Mocali Stefano §
@@ -171,7 +171,7 @@ server <- function(input, output) {
   #### --- Biodiversity index tab:  ---####
   #### --- Bacteria ---####
   
-  output$plot_biodiv_index_bacteria <- renderPlotly({
+  output$plot_biodiv_index_bacteria <- renderPlot({
   
     sites_selected <- sites_selected_reactive()
     
@@ -201,11 +201,8 @@ server <- function(input, output) {
           xlab(input$bacteria_var_choice) +
           ylab(input$bacteria_index_choice) +
           theme_bw() -> plt12
-        
-        ggplotly(plt12) -> plt12
-        plt12$x$data[[1]]$hoverinfo <- "none"
-        
-        ggplotly(plt12)
+
+        plt12
       } else if (input$treshold_line_bact != 0) {
         validate(
           need(is.na(meta_bact_selected[, input$bacteria_var_choice]) == F, "No data for selected variable")
@@ -220,11 +217,8 @@ server <- function(input, output) {
           xlab(input$bacteria_var_choice) +
           ylab(input$bacteria_index_choice) +
           theme_bw() -> plt12
-        
-        ggplotly(plt12) -> plt12
-        plt12$x$data[[1]]$hoverinfo <- "none"
-        
-        ggplotly(plt12)
+
+        plt12
       }
     } else if (is.character(meta_bact_selected[, input$bacteria_var_choice]) == T) {
       meta_bact_selected %>%
@@ -243,14 +237,11 @@ server <- function(input, output) {
         ylab(input$bacteria_index_choice) +
         theme_bw() +
         coord_flip() -> plt12
-      
-      ggplotly(plt12) -> plt12
-      plt12$x$data[[1]]$hoverinfo <- "none"
-      
-      ggplotly(plt12)
+
+      plt12
     }
   })
-  
+
   output$bacteria_index_table <- renderDataTable({
    
     sites_selected <- sites_selected_reactive()
@@ -403,7 +394,8 @@ server <- function(input, output) {
         cor_test(!!as.symbol(input$bacteria_index_choice), !!as.symbol(input$bacteria_var_choice), method = "spearman") %>%
         as.data.frame() -> bacteria_spearman
       
-      rbind(bacteria_pearson[, -c(1, 2,6,7)], bacteria_spearman[, -c(1, 2)]) -> df_correlation_kruskal_bacteria
+      correl_cols <- c("cor", "statistic", "p", "method")
+      rbind(bacteria_pearson[, correl_cols], bacteria_spearman[, correl_cols]) -> df_correlation_kruskal_bacteria
       
       df_correlation_kruskal_bacteria
     } else if (is.character(meta_bacteria_selected[, input$bacteria_var_choice]) == T) {
@@ -453,17 +445,23 @@ server <- function(input, output) {
         select(c(!!as.symbol(input$bacteria_index_choice), !!as.symbol(input$bacteria_var_choice))) %>%
         drop_na() %>%
         wilcox_test(as.formula(paste(bacteria_index_choice, paste("~", bacteria_var_choice))), p.adjust.method = "bonferroni") -> bacteria_wilcox
-      
+
+      meta_bacteria_selected %>%
+        select(c(!!as.symbol(input$bacteria_index_choice), !!as.symbol(input$bacteria_var_choice))) %>%
+        drop_na() %>%
+        wilcox_effsize(as.formula(paste(bacteria_index_choice, paste("~", bacteria_var_choice)))) -> bacteria_effsize
+
       bacteria_wilcox %>%
         as.data.frame() %>%
-        mutate_at(vars(p), funs(ifelse(. > 0.05, NA, .))) %>% 
+        left_join(as.data.frame(bacteria_effsize)[, c("group1", "group2", "effsize")], by = c("group1", "group2")) %>%
+        mutate_at(vars(p), funs(ifelse(. > 0.05, NA, .))) %>%
+        mutate(effsize = ifelse(is.na(p), NA, effsize)) %>%
         ggplot(aes(
           x = group1,
           y = group2
         )) +
-        geom_tile(
+        geom_tile(aes(fill = effsize),
           color = "black",
-          fill = "gray100",
           lwd = 0.8,
           linetype = 1
         ) +
@@ -473,28 +471,28 @@ server <- function(input, output) {
         ) +
         xlab("") +
         ylab("") +
-        # scale_fill_gradient(
-        #   low = "grey80",
-        #   high = "white"
-        # ) +
+        scale_fill_gradientn(
+          colors = c("#EDF8B1", "#7FCDBB", "#2C7FB8"),
+          na.value = "white",
+          limits = c(0, 1),
+          name = "Effect size (r)"
+        ) +
         theme(
-          legend.position = "none",
+          legend.position = "right",
           panel.grid.major.y = element_blank(),
           panel.grid.major.x = element_line(colour = "black", linetype = "dotted"),
-          # panel.grid.major = element_blank(),
-          # panel.grid.minor = element_blank(),
           panel.background = element_blank(),
           axis.text=element_text(size=12)
         ) +
         theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) -> plt13
-      
+
       plt13
     }
   })
   
   #### --- Fungi ---####
 
-  output$plot_biodiv_index_fungi <- renderPlotly({
+  output$plot_biodiv_index_fungi <- renderPlot({
   
     sites_selected <- sites_selected_reactive()
 
@@ -525,10 +523,7 @@ server <- function(input, output) {
           ylab(input$fungi_index_choice) +
           theme_bw() -> plt6
 
-        ggplotly(plt6) -> plt6
-        plt6$x$data[[1]]$hoverinfo <- "none"
-
-        ggplotly(plt6)
+        plt6
       } else if (input$treshold_line_fung != 0) {
         validate(
           need(is.na(meta_fungi_selected[, input$fungi_var_choice]) == F, "No data for selected variable")
@@ -544,10 +539,7 @@ server <- function(input, output) {
           ylab(input$fungi_index_choice) +
           theme_bw() -> plt6
 
-        ggplotly(plt6) -> plt6
-        plt6$x$data[[1]]$hoverinfo <- "none"
-
-        ggplotly(plt6)
+        plt6
       }
     } else if (is.character(meta_fungi_selected[, input$fungi_var_choice]) == T) {
       meta_fungi_selected %>%
@@ -567,10 +559,7 @@ server <- function(input, output) {
         theme_bw() +
         coord_flip() -> plt6
 
-      ggplotly(plt6) -> plt6
-      plt6$x$data[[1]]$hoverinfo <- "none"
-
-      ggplotly(plt6)
+      plt6
     }
   })
 
@@ -725,7 +714,8 @@ server <- function(input, output) {
         cor_test(!!as.symbol(input$fungi_index_choice), !!as.symbol(input$fungi_var_choice), method = "spearman") %>%
         as.data.frame() -> fungi_spearman
 
-      rbind(fungi_pearson[, -c(1, 2, 6, 7)], fungi_spearman[, -c(1, 2)]) -> df_correlation_kruskal_fungi
+      correl_cols <- c("cor", "statistic", "p", "method")
+      rbind(fungi_pearson[, correl_cols], fungi_spearman[, correl_cols]) -> df_correlation_kruskal_fungi
 
       df_correlation_kruskal_fungi
     } else if (is.character(meta_fungi_selected[, input$fungi_var_choice]) == T) {
@@ -776,16 +766,22 @@ server <- function(input, output) {
         drop_na() %>%
         wilcox_test(as.formula(paste(fungi_index_choice, paste("~", fungi_var_choice))), p.adjust.method = "bonferroni") -> fungi_wilcox
 
+      meta_fungi_selected %>%
+        select(c(!!as.symbol(input$fungi_index_choice), !!as.symbol(input$fungi_var_choice))) %>%
+        drop_na() %>%
+        wilcox_effsize(as.formula(paste(fungi_index_choice, paste("~", fungi_var_choice)))) -> fungi_effsize
+
       fungi_wilcox %>%
         as.data.frame() %>%
-        mutate_at(vars(p), funs(ifelse(. > 0.05, NA, .))) %>% 
+        left_join(as.data.frame(fungi_effsize)[, c("group1", "group2", "effsize")], by = c("group1", "group2")) %>%
+        mutate_at(vars(p), funs(ifelse(. > 0.05, NA, .))) %>%
+        mutate(effsize = ifelse(is.na(p), NA, effsize)) %>%
         ggplot(aes(
           x = group1,
           y = group2
         )) +
-        geom_tile(
+        geom_tile(aes(fill = effsize),
           color = "black",
-          fill = "gray100",
           lwd = 0.8,
           linetype = 1
         ) +
@@ -795,16 +791,16 @@ server <- function(input, output) {
         ) +
         xlab("") +
         ylab("") +
-        # scale_fill_gradient(
-        #   low = "grey80",
-        #   high = "white"
-        # ) +
+        scale_fill_gradientn(
+          colors = c("#EDF8B1", "#7FCDBB", "#2C7FB8"),
+          na.value = "white",
+          limits = c(0, 1),
+          name = "Effect size (r)"
+        ) +
         theme(
-          legend.position = "none",
+          legend.position = "right",
           panel.grid.major.y = element_blank(),
           panel.grid.major.x = element_line(colour = "black", linetype = "dotted"),
-          # panel.grid.major = element_blank(),
-          # panel.grid.minor = element_blank(),
           panel.background = element_blank(),
           axis.text=element_text(size=12)
           ) +
@@ -816,7 +812,7 @@ server <- function(input, output) {
 
   #### --- Mesofauna ---####
 
-  output$plot_biodiv_index_meso <- renderPlotly({
+  output$plot_biodiv_index_meso <- renderPlot({
     
     sites_selected <- sites_selected_reactive()
 
@@ -879,10 +875,7 @@ server <- function(input, output) {
           ylab("QBS-ar") +
           theme_bw() -> plt5
 
-        ggplotly(plt5) -> plt5
-        plt5$x$data[[1]]$hoverinfo <- "none"
-
-        ggplotly(plt5)
+        plt5
       } else if (input$treshold_line_meso != 0) {
         validate(
           need(is.na(meta_meso_selected[, input$meso_var_choice]) == F, "No data for selected variable")
@@ -898,10 +891,7 @@ server <- function(input, output) {
           ylab("QBS-ar") +
           theme_bw() -> plt5
 
-        ggplotly(plt5) -> plt5
-        plt5$x$data[[1]]$hoverinfo <- "none"
-
-        ggplotly(plt5)
+        plt5
       }
     } else if (is.character(meta_meso_selected[, input$meso_var_choice]) == T) {
       meta_meso_selected %>%
@@ -921,10 +911,7 @@ server <- function(input, output) {
         theme_bw() +
         coord_flip() -> plt5
 
-      ggplotly(plt5) -> plt5
-      plt5$x$data[[1]]$hoverinfo <- "none"
-
-      ggplotly(plt5)
+      plt5
     }
   })
 
@@ -1133,7 +1120,8 @@ server <- function(input, output) {
         cor_test(diversity_index_value, !!as.symbol(input$meso_var_choice), method = "spearman") %>%
         as.data.frame() -> meso_spearman
 
-      rbind(meso_pearson[, -c(1, 2, 6, 7)], meso_spearman[, -c(1, 2)]) -> df_correlation_kruskal_meso
+      correl_cols <- c("cor", "statistic", "p", "method")
+      rbind(meso_pearson[, correl_cols], meso_spearman[, correl_cols]) -> df_correlation_kruskal_meso
 
       df_correlation_kruskal_meso
     } else if (is.character(meta_meso_selected[, input$meso_var_choice]) == T) {
@@ -1220,16 +1208,22 @@ server <- function(input, output) {
         drop_na() %>%
         wilcox_test(as.formula(paste("diversity_index_value", paste("~", meso_var_choice))), p.adjust.method = "bonferroni") -> meso_wilcox
 
+      meta_meso_selected %>%
+        select(c(diversity_index_value, !!as.symbol(input$meso_var_choice))) %>%
+        drop_na() %>%
+        wilcox_effsize(as.formula(paste("diversity_index_value", paste("~", meso_var_choice)))) -> meso_effsize
+
       meso_wilcox %>%
         as.data.frame() %>%
-        mutate_at(vars(p), funs(ifelse(. > 0.05, NA, .))) %>% 
+        left_join(as.data.frame(meso_effsize)[, c("group1", "group2", "effsize")], by = c("group1", "group2")) %>%
+        mutate_at(vars(p), funs(ifelse(. > 0.05, NA, .))) %>%
+        mutate(effsize = ifelse(is.na(p), NA, effsize)) %>%
         ggplot(aes(
           x = group1,
           y = group2
         )) +
-        geom_tile(
+        geom_tile(aes(fill = effsize),
           color = "black",
-          fill = "gray100",
           lwd = 0.8,
           linetype = 1
         ) +
@@ -1239,16 +1233,16 @@ server <- function(input, output) {
         ) +
         xlab("") +
         ylab("") +
-        # scale_fill_gradient(
-        #   low = "grey80",
-        #   high = "white"
-        # ) +
+        scale_fill_gradientn(
+          colors = c("#EDF8B1", "#7FCDBB", "#2C7FB8"),
+          na.value = "white",
+          limits = c(0, 1),
+          name = "Effect size (r)"
+        ) +
         theme(
-          legend.position = "none",
+          legend.position = "right",
           panel.grid.major.y = element_blank(),
           panel.grid.major.x = element_line(colour = "black", linetype = "dotted"),
-          # panel.grid.major = element_blank(),
-          # panel.grid.minor = element_blank(),
           panel.background = element_blank(),
           axis.text=element_text(size=12)
         ) +
@@ -1260,7 +1254,7 @@ server <- function(input, output) {
 
   #### --- Microfauna ####
 
-  output$plot_biodiv_index_micro <- renderPlotly({
+  output$plot_biodiv_index_micro <- renderPlot({
    
     sites_selected <- sites_selected_reactive()
 
@@ -1283,10 +1277,7 @@ server <- function(input, output) {
           ylab(input$micro_index_choice) +
           theme_bw() -> plt7
 
-        ggplotly(plt7) -> plt7
-        plt7$x$data[[1]]$hoverinfo <- "none"
-
-        ggplotly(plt7)
+        plt7
       } else if (input$treshold_line_micro != 0) {
         meta_micro_selected %>%
           as_tibble() %>%
@@ -1298,10 +1289,7 @@ server <- function(input, output) {
           ylab(input$micro_index_choice) +
           theme_bw() -> plt7
 
-        ggplotly(plt7) -> plt7
-        plt7$x$data[[1]]$hoverinfo <- "none"
-
-        ggplotly(plt7)
+        plt7
       }
     } else if (is.character(meta_micro_selected[, input$micro_var_choice]) == T) {
       meta_micro_selected %>%
@@ -1315,10 +1303,7 @@ server <- function(input, output) {
         theme_bw() +
         coord_flip() -> plt7
 
-      ggplotly(plt7) -> plt7
-      plt7$x$data[[1]]$hoverinfo <- "none"
-
-      ggplotly(plt7)
+      plt7
     }
   })
 
@@ -1456,7 +1441,8 @@ server <- function(input, output) {
         cor_test(!!as.symbol(input$micro_index_choice), !!as.symbol(input$micro_var_choice), method = "spearman") %>%
         as.data.frame() -> micro_spearman
 
-      rbind(micro_pearson[, -c(1, 2, 6, 7)], micro_spearman[, -c(1, 2)]) -> df_correlation_kruskal_micro
+      correl_cols <- c("cor", "statistic", "p", "method")
+      rbind(micro_pearson[, correl_cols], micro_spearman[, correl_cols]) -> df_correlation_kruskal_micro
 
       df_correlation_kruskal_micro
     } else if (is.character(meta_micro_selected[, input$micro_var_choice]) == T) {
@@ -1507,16 +1493,22 @@ server <- function(input, output) {
         drop_na() %>%
         wilcox_test(as.formula(paste(micro_index_choice, paste("~", micro_var_choice))), p.adjust.method = "bonferroni") -> micro_wilcox
 
+      meta_micro_selected %>%
+        select(c(!!as.symbol(input$micro_index_choice), !!as.symbol(input$micro_var_choice))) %>%
+        drop_na() %>%
+        wilcox_effsize(as.formula(paste(micro_index_choice, paste("~", micro_var_choice)))) -> micro_effsize
+
       micro_wilcox %>%
         as.data.frame() %>%
-        mutate_at(vars(p), funs(ifelse(. > 0.05, NA, .))) %>% 
+        left_join(as.data.frame(micro_effsize)[, c("group1", "group2", "effsize")], by = c("group1", "group2")) %>%
+        mutate_at(vars(p), funs(ifelse(. > 0.05, NA, .))) %>%
+        mutate(effsize = ifelse(is.na(p), NA, effsize)) %>%
         ggplot(aes(
           x = group1,
           y = group2
           )) +
-        geom_tile(
+        geom_tile(aes(fill = effsize),
           color = "black",
-          fill = "gray100",
           lwd = 0.8,
           linetype = 1
         ) +
@@ -1526,16 +1518,16 @@ server <- function(input, output) {
         ) +
         xlab("") +
         ylab("") +
-        # scale_fill_gradient(
-        #   low = "grey80",
-        #   high = "white"
-        # ) +
+        scale_fill_gradientn(
+          colors = c("#EDF8B1", "#7FCDBB", "#2C7FB8"),
+          na.value = "white",
+          limits = c(0, 1),
+          name = "Effect size (r)"
+        ) +
         theme(
-          legend.position = "none",
+          legend.position = "right",
           panel.grid.major.y = element_blank(),
           panel.grid.major.x = element_line(colour = "black", linetype = "dotted"),
-          # panel.grid.major = element_blank(),
-          # panel.grid.minor = element_blank(),
           panel.background = element_blank(),
           axis.text=element_text(size=12)
         ) +
@@ -1547,7 +1539,7 @@ server <- function(input, output) {
 
   #### --- Macrofauna ####  
   
-  output$plot_biodiv_index_macro <- renderPlotly({
+  output$plot_biodiv_index_macro <- renderPlot({
     
   
     sites_selected <- sites_selected_reactive()
@@ -1593,13 +1585,9 @@ server <- function(input, output) {
           scale_colour_manual(values = c("#E69F00", "#56B4E9", "#009E73", "#D55E00", "#CC79A7")) +
           theme_bw() -> plt14
 
-        ggplotly(plt14) -> plt14
-        plt14$x$data[[1]]$hoverinfo <- "none"
+        plt14
 
-        ggplotly(plt14)
-          
-        
-      }  else if (input$treshold_line_macro != 0) { 
+      }  else if (input$treshold_line_macro != 0) {
         
         meta_macro_abb_selected %>% 
           as_tibble() %>%
@@ -1612,15 +1600,12 @@ server <- function(input, output) {
           geom_point() +
           geom_smooth(method = "lm") +
           ylab("Mean Abundance") +
-          xlab(macro_var_choice) +
+          xlab(input$macro_var_choice) +
           scale_colour_manual(values = c("#E69F00", "#56B4E9", "#009E73", "#D55E00", "#CC79A7")) +
           theme_bw() -> plt14
-        
-        ggplotly(plt14) -> plt14
-        plt14$x$data[[1]]$hoverinfo <- "none"
-        
-        ggplotly(plt14)
-        
+
+        plt14
+
       }
       } else if (is.character(meta_macro_abb_selected[, input$macro_var_choice]) == T) {
       
@@ -1635,18 +1620,15 @@ server <- function(input, output) {
           geom_boxplot(alpha = 0.5) +
           facet_wrap(.~ecological_group, nrow = 3, ncol = 2) +
           xlab("") +
-          ylab(input$macro_index_choice) +
+          ylab("Mean Abundance") +
           theme_bw() +
           coord_flip() -> plt14
-        
-        ggplotly(plt14) -> plt14
-        plt14$x$data[[1]]$hoverinfo <- "none"
-        
-        ggplotly(plt14)
+
+        plt14
     }
   })
-  
-  output$barplot_biodiv_index_macro <- renderPlotly({
+
+  output$barplot_biodiv_index_macro <- renderPlot({
   
     sites_selected <- sites_selected_reactive()
     
@@ -1700,11 +1682,489 @@ server <- function(input, output) {
         geom_bar(stat = "identity") +
         theme_bw() +
         scale_fill_manual(values = c("#E69F00", "#56B4E9", "#009E73", "#D55E00", "#CC79A7")) -> plt15
-      
-      ggplotly(plt15)
-      
+
+      plt15
+
     }
-    
-    
+
+
+  })
+
+  #### --- Scenario Testing tab ---####
+
+  rv_scenarios <- reactiveValues(scenarios = list(), next_id = 1)
+
+  observeEvent(input$add_scenario, {
+    if (length(rv_scenarios$scenarios) >= length(okabe_ito_palette)) return()
+    used_colors <- if (length(rv_scenarios$scenarios) > 0) {
+      sapply(rv_scenarios$scenarios, function(s) s$color_idx)
+    } else {
+      integer(0)
+    }
+    next_color_idx <- setdiff(seq_along(okabe_ito_palette), used_colors)[1]
+    new_id <- rv_scenarios$next_id
+    rv_scenarios$next_id <- rv_scenarios$next_id + 1
+    rv_scenarios$scenarios <- c(rv_scenarios$scenarios, list(list(
+      id = new_id,
+      name = paste("Scenario", new_id),
+      color_idx = next_color_idx,
+      color = okabe_ito_palette[next_color_idx]
+    )))
+  })
+
+  observeEvent(input$remove_scenario_id, {
+    rv_scenarios$scenarios <- Filter(function(s) s$id != input$remove_scenario_id, rv_scenarios$scenarios)
+  })
+
+  current_scenario_name <- function(s) {
+    name_val <- input[[paste0("scn_name_", s$id)]]
+    if (is.null(name_val) || identical(name_val, "")) paste("Scenario", s$id) else name_val
+  }
+
+  # Uploaded samples are read straight from the temp path Shiny gives the file -
+  # never written anywhere else, never persisted beyond this session.
+  uploaded_samples <- reactive({
+    # NOT req(): req()'s silent-stop would abort the ENTIRE render of any output
+    # that calls this reactive (e.g. scenario_radar_plot), not just the part that
+    # needs the upload - meaning the scenario polygons would vanish too whenever
+    # no file had been uploaded yet. Returning NULL lets each caller decide how
+    # to handle "nothing uploaded" (they already all check for it).
+    if (is.null(input$sample_upload)) return(NULL)
+    tryCatch(
+      utils::read.csv(input$sample_upload$datapath, stringsAsFactors = FALSE),
+      error = function(e) NULL
+    )
+  })
+
+  n_uploaded <- reactive({
+    df <- uploaded_samples()
+    if (is.null(df)) 0 else nrow(df)
+  })
+
+  output$scenario_plot_type_selector <- renderUI({
+    n <- n_uploaded()
+    if (n > 20) {
+      choices <- c("Histogram" = "histogram", "Violin" = "violin")
+      default <- "histogram"
+    } else {
+      choices <- c("Radar" = "radar", "Histogram" = "histogram", "Violin" = "violin")
+      default <- "radar"
+    }
+    # Preserve the user's current choice across re-renders (e.g. a new upload
+    # crossing the n=20 line) if it's still valid; only fall back to the
+    # size-appropriate default when it isn't (or hasn't been chosen yet).
+    current <- isolate(input$scenario_plot_type)
+    selected <- if (!is.null(current) && current %in% choices) current else default
+    radioButtons("scenario_plot_type", "Plot type", choices = choices, selected = selected, inline = TRUE)
+  })
+
+  # Long-format sample values, one row per (sample, variable) - feeds the
+  # histogram/violin plots. Not used by the radar, which only needs positions.
+  sample_values_long <- reactive({
+    df <- uploaded_samples()
+    validate(need(!is.null(df) && nrow(df) > 0, "Upload a CSV to see this view."))
+    all_vars <- sml_scenario_variables
+    rows <- lapply(seq_len(nrow(all_vars)), function(i) {
+      v <- all_vars[i, ]
+      vals <- if (v$id %in% colnames(df)) suppressWarnings(as.numeric(df[[v$id]])) else rep(NA_real_, nrow(df))
+      data.frame(variable = v$label, value = vals, stringsAsFactors = FALSE)
+    })
+    out <- do.call(rbind, rows)
+    out$variable <- factor(out$variable, levels = all_vars$label)
+    out
+  })
+
+  # Long-format threshold value per (scenario, variable) - feeds the colored
+  # threshold lines on the histogram/violin plots.
+  scenario_thresholds_long <- reactive({
+    scenarios <- rv_scenarios$scenarios
+    validate(need(length(scenarios) > 0, "Add at least one scenario to see threshold lines."))
+    all_vars <- sml_scenario_variables
+    rows <- lapply(scenarios, function(s) {
+      do.call(rbind, lapply(seq_len(nrow(all_vars)), function(i) {
+        v <- all_vars[i, ]
+        thr <- if (v$part == "A") {
+          v$fixed_value
+        } else {
+          tv <- input[[paste0("thr_", s$id, "_", v$id)]]
+          if (is.null(tv)) NA_real_ else as.numeric(tv)
+        }
+        data.frame(variable = v$label, scenario = current_scenario_name(s),
+                   color = s$color, thr = thr, stringsAsFactors = FALSE)
+      }))
+    })
+    out <- do.call(rbind, rows)
+    out$variable <- factor(out$variable, levels = all_vars$label)
+    out
+  })
+
+  # Single source of truth for per-sample x per-variable x per-scenario
+  # healthy/unhealthy/undetermined status - used by both the aggregated and
+  # detailed classification tables (previously duplicated between them).
+  sample_classification <- reactive({
+    df <- uploaded_samples()
+    validate(need(!is.null(df) && nrow(df) > 0, "Upload a CSV to see classification results."))
+    scenarios <- rv_scenarios$scenarios
+    validate(need(length(scenarios) > 0, "Add at least one scenario to classify samples against."))
+
+    sample_ids <- if ("sample_id" %in% colnames(df)) as.character(df$sample_id) else paste("Row", seq_len(nrow(df)))
+    all_vars <- sml_scenario_variables
+
+    rows <- lapply(scenarios, function(s) {
+      do.call(rbind, lapply(seq_len(nrow(df)), function(r) {
+        do.call(rbind, lapply(seq_len(nrow(all_vars)), function(i) {
+          v <- all_vars[i, ]
+          val <- if (v$id %in% colnames(df)) suppressWarnings(as.numeric(df[[v$id]][r])) else NA_real_
+          thr <- if (v$part == "A") {
+            v$fixed_value
+          } else {
+            tv <- input[[paste0("thr_", s$id, "_", v$id)]]
+            if (is.null(tv)) NA_real_ else as.numeric(tv)
+          }
+          status <- if (is.na(val) || is.na(thr)) {
+            "undetermined"
+          } else if (v$direction == "below") {
+            if (val <= thr) "healthy" else "unhealthy"
+          } else {
+            if (val >= thr) "healthy" else "unhealthy"
+          }
+          data.frame(scenario_id = s$id, scenario_name = current_scenario_name(s), scenario_color = s$color,
+                     sample_id = sample_ids[r], variable_id = v$id, variable_label = v$label,
+                     status = status, stringsAsFactors = FALSE)
+        }))
+      }))
+    })
+    do.call(rbind, rows)
+  })
+
+  output$sample_upload_warnings <- renderUI({
+    df <- uploaded_samples()
+    if (is.null(df)) return(NULL)
+
+    msgs <- list()
+    if (!"sample_id" %in% colnames(df)) {
+      msgs <- c(msgs, list(p(style = "color:#c62828;",
+        "No \"sample_id\" column found - rows will be labeled Row 1, Row 2, ...")))
+    }
+    missing_cols <- setdiff(sml_scenario_variables$id, colnames(df))
+    if (length(missing_cols) > 0) {
+      msgs <- c(msgs, list(p(style = "color:#c62828;",
+        sprintf("Missing columns (treated as not available for every sample): %s",
+                paste(missing_cols, collapse = ", ")))))
+    }
+    unknown_cols <- setdiff(colnames(df), c("sample_id", sml_scenario_variables$id))
+    if (length(unknown_cols) > 0) {
+      msgs <- c(msgs, list(p(style = "color:#888;",
+        sprintf("Unrecognized columns ignored: %s", paste(unknown_cols, collapse = ", ")))))
+    }
+    if (length(msgs) == 0) {
+      msgs <- list(p(style = "color:#2e7d32;", sprintf("%d sample(s) loaded.", nrow(df))))
+    }
+    tagList(msgs)
+  })
+
+  output$scenario_boxes <- renderUI({
+    scenarios <- rv_scenarios$scenarios
+    if (length(scenarios) == 0) {
+      return(p(em("No scenarios yet - click \"+ Add scenario\" to define your first set of national thresholds.")))
+    }
+
+    partB <- sml_scenario_variables[sml_scenario_variables$part == "B", ]
+
+    boxes <- lapply(scenarios, function(s) {
+      name_id <- paste0("scn_name_", s$id)
+      current_name <- isolate(input[[name_id]])
+      if (is.null(current_name)) current_name <- s$name
+
+      var_inputs <- lapply(seq_len(nrow(partB)), function(i) {
+        v <- partB[i, ]
+        input_id <- paste0("thr_", s$id, "_", v$id)
+        current_val <- isolate(input[[input_id]])
+        dir_symbol <- if (v$direction == "below") "healthy ≤" else "healthy ≥"
+        column(width = 4,
+          numericInput(input_id,
+            label = sprintf("%s (%s) - %s", v$label, v$unit, dir_symbol),
+            value = if (is.null(current_val)) NA else current_val,
+            min = 0)
+        )
+      })
+
+      div(style = sprintf("border-left: 6px solid %s; padding: 10px 15px; margin-bottom: 15px; background-color: #fafafa;", s$color),
+        fluidRow(
+          column(9, textInput(name_id, label = NULL, value = current_name)),
+          column(3, tags$button(class = "btn btn-danger btn-sm", type = "button",
+                                 onclick = sprintf("Shiny.setInputValue('remove_scenario_id', %d, {priority: 'event'})", s$id),
+                                 "Remove"))
+        ),
+        fluidRow(var_inputs)
+      )
+    })
+
+    tagList(boxes)
+  })
+
+  output$scenario_radar_plot <- renderPlot({
+    plot_type <- input$scenario_plot_type
+    if (is.null(plot_type)) plot_type <- if (n_uploaded() > 20) "histogram" else "radar"
+
+    if (plot_type %in% c("histogram", "violin")) {
+      # Multiple scenarios don't map to radar's overlay/facet toggle here - each
+      # variable panel just gets one colored dashed line per scenario, which is
+      # simpler and avoids a variables x scenarios facet grid getting huge.
+      vals <- sample_values_long()
+      thr <- scenario_thresholds_long()
+      color_lookup <- unique(thr[, c("scenario", "color")])
+      color_vec <- setNames(color_lookup$color, color_lookup$scenario)
+
+      if (plot_type == "histogram") {
+        ggplot(vals, aes(x = value)) +
+          geom_histogram(bins = 15, fill = "#2C7FB8", alpha = 0.7, color = "white", na.rm = TRUE) +
+          geom_vline(data = thr, aes(xintercept = thr, color = scenario),
+                     linetype = "dashed", linewidth = 0.8, na.rm = TRUE) +
+          scale_color_manual(values = color_vec) +
+          facet_wrap(~variable, scales = "free_x", ncol = 3) +
+          theme_bw() +
+          theme(strip.text = element_text(size = 9), legend.title = element_blank()) +
+          labs(x = NULL, y = "count")
+      } else {
+        ggplot(vals, aes(x = 1, y = value)) +
+          geom_violin(fill = "#2C7FB8", alpha = 0.5, color = "#2C7FB8", trim = FALSE, na.rm = TRUE) +
+          geom_jitter(width = 0.15, height = 0, alpha = 0.3, size = 0.8, na.rm = TRUE) +
+          geom_hline(data = thr, aes(yintercept = thr, color = scenario),
+                     linetype = "dashed", linewidth = 0.8, na.rm = TRUE) +
+          scale_color_manual(values = color_vec) +
+          facet_wrap(~variable, scales = "free_y", ncol = 3) +
+          theme_bw() +
+          theme(strip.text = element_text(size = 9), axis.text.x = element_blank(),
+                axis.ticks.x = element_blank(), legend.title = element_blank()) +
+          labs(x = NULL, y = NULL)
+      }
+
+    } else {
+    scenarios <- rv_scenarios$scenarios
+    validate(need(length(scenarios) > 0, "Add at least one scenario to see the plot."))
+
+    partB <- sml_scenario_variables[sml_scenario_variables$part == "B", ]
+    all_vars <- sml_scenario_variables
+    n_vars <- nrow(all_vars)
+
+    scenario_data <- lapply(scenarios, function(s) {
+      vals <- vapply(seq_len(nrow(partB)), function(i) {
+        v <- input[[paste0("thr_", s$id, "_", partB$id[i])]]
+        if (is.null(v)) NA_real_ else as.numeric(v)
+      }, numeric(1))
+      list(
+        id = s$id,
+        name = current_scenario_name(s),
+        color = s$color,
+        partB_values = vals,
+        complete = !any(is.na(vals))
+      )
+    })
+
+    complete_scenarios <- Filter(function(s) s$complete, scenario_data)
+    validate(need(length(complete_scenarios) > 0,
+                  "Fill in all six Part B thresholds for at least one scenario to see the plot."))
+
+    # Computed once here (not just down where points are drawn) because the axis
+    # range itself needs to account for uploaded values - otherwise a sample could
+    # flicker in/out of view purely because scenarios changed, even though its own
+    # value never did. The range is still allowed to shift as scenarios are added/
+    # removed/edited; it just always includes whatever samples are currently loaded.
+    samples_df <- uploaded_samples()
+
+    axis_range <- lapply(seq_len(n_vars), function(i) {
+      v <- all_vars[i, ]
+      scenario_vals <- if (v$part == "A") {
+        v$fixed_value
+      } else {
+        sapply(complete_scenarios, function(s) s$partB_values[which(partB$id == v$id)])
+      }
+      sample_vals <- if (!is.null(samples_df) && v$id %in% colnames(samples_df)) {
+        suppressWarnings(as.numeric(samples_df[[v$id]]))
+      } else {
+        numeric(0)
+      }
+      rng <- range(c(scenario_vals, sample_vals), na.rm = TRUE)
+      if (diff(rng) == 0) rng <- rng + c(-1, 1) * (abs(rng[1]) * 0.1 + 0.01)
+      pad <- diff(rng) * 0.15
+      c(rng[1] - pad, rng[2] + pad)
+    })
+    names(axis_range) <- all_vars$id
+
+    normalize <- function(value, var_id) {
+      v <- all_vars[all_vars$id == var_id, ]
+      rng <- axis_range[[var_id]]
+      pos <- (value - rng[1]) / (rng[2] - rng[1])
+      if (v$direction == "above") pos <- 1 - pos
+      pmin(pmax(pos, 0), 1)
+    }
+
+    plot_df <- do.call(rbind, lapply(complete_scenarios, function(s) {
+      do.call(rbind, lapply(seq_len(n_vars), function(i) {
+        v <- all_vars[i, ]
+        raw_val <- if (v$part == "A") v$fixed_value else s$partB_values[which(partB$id == v$id)]
+        data.frame(scenario = s$name, color = s$color,
+                   variable = v$label, position = normalize(raw_val, v$id),
+                   stringsAsFactors = FALSE)
+      }))
+    }))
+    plot_df$variable <- factor(plot_df$variable, levels = all_vars$label)
+    scenario_order <- sapply(complete_scenarios, function(s) s$name)
+    plot_df$scenario <- factor(plot_df$scenario, levels = scenario_order)
+
+    color_map <- setNames(sapply(complete_scenarios, function(s) s$color), scenario_order)
+
+    zoom_max <- input$scenario_radius_zoom
+    if (is.null(zoom_max) || zoom_max <= 0) zoom_max <- 1
+
+    p <- ggplot(plot_df, aes(x = variable, y = position, group = scenario, color = scenario, fill = scenario)) +
+      geom_polygon(alpha = 0.18, linewidth = 0) +
+      geom_path(linewidth = 1) +
+      geom_point(size = 2) +
+      scale_color_manual(values = color_map) +
+      scale_fill_manual(values = color_map) +
+      # scales::squish clamps out-of-range vertices to the visible edge instead of
+      # dropping them to NA (ylim()'s default) - a polygon needs every vertex to
+      # draw at all, so dropping any one of them made the whole shape/fill vanish
+      # as soon as the zoom excluded a single vertex.
+      scale_y_continuous(limits = c(0, zoom_max), oob = scales::squish) +
+      coord_radar() +
+      theme_bw() +
+      theme(axis.title = element_blank(), axis.text.y = element_text(size = 10, face = "bold", color = "grey30"),
+            legend.title = element_blank())
+
+    # Uploaded sample points: skip (not clamp) anything missing or outside the
+    # axis range (which, per above, already accounts for every loaded sample) -
+    # this only affects what CAN be drawn, the classification table evaluates
+    # every value regardless of plot range.
+    if (!is.null(samples_df) && nrow(samples_df) > 0) {
+      sample_ids <- if ("sample_id" %in% colnames(samples_df)) {
+        as.character(samples_df$sample_id)
+      } else {
+        paste("Row", seq_len(nrow(samples_df)))
+      }
+      point_rows <- do.call(rbind, lapply(seq_len(nrow(samples_df)), function(r) {
+        do.call(rbind, lapply(seq_len(n_vars), function(i) {
+          v <- all_vars[i, ]
+          if (!(v$id %in% colnames(samples_df))) return(NULL)
+          raw_val <- suppressWarnings(as.numeric(samples_df[[v$id]][r]))
+          if (is.na(raw_val)) return(NULL)
+          rng <- axis_range[[v$id]]
+          if (raw_val < rng[1] || raw_val > rng[2]) return(NULL)
+          data.frame(sample = sample_ids[r], variable = v$label,
+                     position = normalize(raw_val, v$id), stringsAsFactors = FALSE)
+        }))
+      }))
+      if (!is.null(point_rows) && nrow(point_rows) > 0) {
+        point_rows$variable <- factor(point_rows$variable, levels = all_vars$label)
+        p <- p + geom_point(data = point_rows, aes(x = variable, y = position, group = sample),
+                             inherit.aes = FALSE, shape = 1, size = 2.2,
+                             color = "black", stroke = 0.9)
+      }
+    }
+
+    if (identical(input$scenario_view_mode, "facet")) {
+      p <- p + facet_wrap(~scenario) + theme(legend.position = "none")
+    }
+
+    p
+    }
+  })
+
+  output$sample_classification_table <- renderUI({
+    cls <- sample_classification()
+    all_vars <- sml_scenario_variables
+    scenario_ids <- unique(cls$scenario_id)  # preserves add-order (cls is built in that order)
+
+    flag_symbol <- function(status) {
+      if (status == "healthy") {
+        tags$span(style = "color:#2e7d32; font-weight:bold;", "✓")
+      } else if (status == "unhealthy") {
+        tags$span(style = "color:#c62828; font-weight:bold;", "✗")
+      } else {
+        tags$span(style = "color:#9e9e9e;", "–")
+      }
+    }
+
+    view_mode <- input$sample_table_view_mode
+    if (is.null(view_mode)) view_mode <- "aggregated"
+
+    if (view_mode == "aggregated") {
+      blocks <- lapply(scenario_ids, function(sid) {
+        sub <- cls[cls$scenario_id == sid, ]
+        header_row <- tags$tr(tags$td(colspan = 5,
+          style = sprintf("background-color:%s; color:#ffffff; font-weight:bold; padding:8px;", sub$scenario_color[1]),
+          sub$scenario_name[1]))
+        var_header <- tags$tr(tags$th("Variable"), tags$th("Healthy"), tags$th("Unhealthy"),
+                               tags$th("Undetermined"), tags$th("% Healthy"))
+
+        var_rows <- lapply(seq_len(nrow(all_vars)), function(i) {
+          v <- all_vars[i, ]
+          sub_v <- sub[sub$variable_id == v$id, ]
+          healthy <- sum(sub_v$status == "healthy")
+          unhealthy <- sum(sub_v$status == "unhealthy")
+          undetermined <- sum(sub_v$status == "undetermined")
+          # % excludes undetermined from the denominator - a genuinely unevaluated
+          # sample shouldn't dilute a "% compliant" figure either way.
+          pct <- if ((healthy + unhealthy) > 0) sprintf("%.0f%%", 100 * healthy / (healthy + unhealthy)) else "-"
+          tags$tr(
+            tags$td(v$label),
+            tags$td(align = "center", style = "color:#2e7d32;", healthy),
+            tags$td(align = "center", style = "color:#c62828;", unhealthy),
+            tags$td(align = "center", style = "color:#9e9e9e;", undetermined),
+            tags$td(align = "center", pct)
+          )
+        })
+
+        total_healthy <- sum(sub$status == "healthy")
+        total_unhealthy <- sum(sub$status == "unhealthy")
+        total_undetermined <- sum(sub$status == "undetermined")
+        total_pct <- if ((total_healthy + total_unhealthy) > 0) {
+          sprintf("%.0f%%", 100 * total_healthy / (total_healthy + total_unhealthy))
+        } else {
+          "-"
+        }
+        total_row <- tags$tr(style = "font-weight:bold; background-color:#f0f0f0;",
+          tags$td("Total"),
+          tags$td(align = "center", total_healthy),
+          tags$td(align = "center", total_unhealthy),
+          tags$td(align = "center", total_undetermined),
+          tags$td(align = "center", total_pct)
+        )
+
+        tagList(header_row, var_header, var_rows, total_row)
+      })
+
+      tags$table(class = "table table-bordered table-striped", tags$tbody(blocks))
+
+    } else {
+      sample_ids <- unique(cls$sample_id)  # preserves upload row order
+      blocks <- lapply(scenario_ids, function(sid) {
+        sub <- cls[cls$scenario_id == sid, ]
+        header_row <- tags$tr(tags$td(colspan = nrow(all_vars) + 2,
+          style = sprintf("background-color:%s; color:#ffffff; font-weight:bold; padding:8px;", sub$scenario_color[1]),
+          sub$scenario_name[1]))
+        var_header <- tags$tr(
+          tags$th("Sample"),
+          lapply(seq_len(nrow(all_vars)), function(i) tags$th(all_vars$label[i])),
+          tags$th("Healthy / Unhealthy / Undetermined")
+        )
+        body_rows <- lapply(sample_ids, function(sample_id) {
+          sub_s <- sub[sub$sample_id == sample_id, ]
+          sub_s <- sub_s[match(all_vars$id, sub_s$variable_id), ]
+          cells <- lapply(seq_len(nrow(sub_s)), function(i) tags$td(align = "center", flag_symbol(sub_s$status[i])))
+          counts <- table(factor(sub_s$status, levels = c("healthy", "unhealthy", "undetermined")))
+          tags$tr(
+            tags$td(sample_id),
+            cells,
+            tags$td(sprintf("%d / %d / %d", counts["healthy"], counts["unhealthy"], counts["undetermined"]))
+          )
+        })
+        tagList(header_row, var_header, body_rows)
+      })
+
+      tags$table(class = "table table-bordered table-striped", tags$tbody(blocks))
+    }
   })
 }
