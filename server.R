@@ -1857,6 +1857,38 @@ server <- function(input, output) {
       msgs <- c(msgs, list(p(style = "color:#888;",
         sprintf("Unrecognized columns ignored: %s", paste(unknown_cols, collapse = ", ")))))
     }
+
+    # Value-level checks: type (non-numeric garbage) and plausibility (likely unit
+    # mistakes). Both are informational only - neither blocks the upload nor changes
+    # how values already flow into sample_values_long()/sample_classification(),
+    # which already treat a non-numeric value as NA/"undetermined".
+    present_vars <- sml_scenario_variables[sml_scenario_variables$id %in% colnames(df), ]
+    for (i in seq_len(nrow(present_vars))) {
+      v <- present_vars[i, ]
+      raw <- as.character(df[[v$id]])
+      num <- suppressWarnings(as.numeric(raw))
+
+      bad_rows <- which(!is.na(raw) & trimws(raw) != "" & is.na(num))
+      if (length(bad_rows) > 0) {
+        shown <- head(bad_rows, 5)
+        more <- if (length(bad_rows) > 5) sprintf(" (+%d more)", length(bad_rows) - 5) else ""
+        msgs <- c(msgs, list(p(style = "color:#c62828;",
+          sprintf("Non-numeric value(s) in column \"%s\", row(s) %s%s - treated as missing.",
+                  v$id, paste(shown, collapse = ", "), more))))
+      }
+
+      if (!is.na(v$plausible_min) && !is.na(v$plausible_max)) {
+        out_rows <- which(!is.na(num) & (num < v$plausible_min | num > v$plausible_max))
+        if (length(out_rows) > 0) {
+          shown <- head(out_rows, 5)
+          more <- if (length(out_rows) > 5) sprintf(" (+%d more)", length(out_rows) - 5) else ""
+          msgs <- c(msgs, list(p(style = "color:#e65100;",
+            sprintf("Column \"%s\", row(s) %s%s: value(s) far outside the expected range (%s-%s %s) - check for a possible unit mistake.",
+                    v$id, paste(shown, collapse = ", "), more, v$plausible_min, v$plausible_max, v$unit))))
+        }
+      }
+    }
+
     if (length(msgs) == 0) {
       msgs <- list(p(style = "color:#2e7d32;", sprintf("%d sample(s) loaded.", nrow(df))))
     }

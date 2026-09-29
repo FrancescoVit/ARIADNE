@@ -169,33 +169,15 @@ common_vars <- c(
 ######################################################################################################
 ## --- SML scenario testing: variable definitions ---##
 ######################################################################################################
-# Single source of truth for the "Scenario Testing" tab (SML Annex I thresholds).
-# Both the input UI and the radar plot read from this table, so adding a future axis
-# is a matter of adding one row here.
-#
-# direction: "below" = healthy when value < threshold; "above" = healthy when value > threshold
-# fixed_value: for Part A rows only (EU-mandated, identical across every scenario)
-# minotaur_column: NOT used yet - placeholder for a future feature that would classify actual
-#   MINOTAUR samples as healthy/unhealthy per scenario. NA where MINOTAUR has no equivalent
-#   variable (verified against the raw data_source/*.csv headers, not the app's curated subset).
+# Single source of truth for the "Scenario Testing" tab (SML Annex I thresholds), kept in
+# config/sml_scenario_variables.csv rather than hardcoded here so it can be reviewed/updated
+# (e.g. by colleagues, in Excel) without touching app code. Both the input UI and the radar
+# plot read from this table, so adding a future axis is a matter of adding one row to the CSV.
+# See the CSV's own header comment for column meanings.
 
-sml_scenario_variables <- data.frame(
-  id = c("ec", "soc_clay", "bulk_density",
-         "phosphorus", "erosion", "water_holding", "ksat", "air_capacity", "soc_stock"),
-  label = c("Electrical conductivity", "SOC/clay ratio", "Bulk density (subsoil)",
-            "Extractable phosphorus", "Soil erosion rate", "Water holding capacity",
-            "Saturated hydraulic conductivity", "Air capacity", "SOC stock"),
-  unit = c("dS/m", "ratio", "g/cm3",
-           "mg/kg", "t/ha/yr", "%", "cm/day", "%", "tC/ha"),
-  part = c("A", "A", "A",
-           "B", "B", "B", "B", "B", "B"),
-  direction = c("below", "above", "below",
-                "below", "below", "above", "above", "above", "above"),
-  fixed_value = c(4, 1 / 13, 1.80,
-                  NA, NA, NA, NA, NA, NA),
-  minotaur_column = c(NA, NA, "bulk_density",
-                       "phosphorus_available", NA, NA, NA, NA, NA),
-  stringsAsFactors = FALSE
+sml_scenario_variables <- read.csv(
+  "config/sml_scenario_variables.csv",
+  comment.char = "#", na.strings = c("", "NA"), stringsAsFactors = FALSE
 )
 
 # Okabe-Ito colorblind-safe qualitative palette (already used elsewhere in this app
