@@ -45,9 +45,12 @@ ui <- dashboardPage(
         width = 230,
         sidebarMenu(
             menuItem("Home", tabName = "Home", icon = icon("house")),
+            tags$li(class = "header", "MINOTAUR DATABASE"),
             menuItem("Overview", tabName = "Overview", icon = icon("dashboard")),
             menuItem("Analysis", tabName = "Analysis", icon = icon("magnifying-glass-chart")),
-            menuItem("SML", tabName = "SML", icon = icon("gavel"))
+            tags$li(class = "header", "SOIL MONITORING LAW"),
+            menuItem("Overview", tabName = "SML_Overview", icon = icon("gavel")),
+            menuItem("Scenario testing", tabName = "SML_Scenario", icon = icon("sliders"))
         )
     ),
 
@@ -583,18 +586,13 @@ ui <- dashboardPage(
                 ) # close fluidrow
             ), # close second tab content
 
-            #### --- Third tab content: SML tab ---####
+            #### --- Third tab content: SML Overview tab ---####
             tabItem(
-                tabName = "SML",
+                tabName = "SML_Overview",
                 fluidRow(
                     box(
                         width = 12,
-                        tabsetPanel(
-                            type = "tabs", id = "sml_tab",
-                            #### --- General Information panel ---####
-                            tabPanel(
-                                title = "General Information", value = "t_sml_info",
-                                br(),
+                        br(),
                                 h4("Sources"),
                                 tags$ul(
                                     tags$li(tags$a(href = "https://eur-lex.europa.eu/eli/dir/2025/2360/oj/eng",
@@ -729,15 +727,17 @@ ui <- dashboardPage(
                                       fact. Numeric thresholds are deliberately not shown - the legislative
                                       landscape is too heterogeneous (different units, extraction methods and
                                       quantities across states) to present as comparable figures yet.")),
-                                lapply(seq_len(nrow(sml_annex_precedent_index)), function(i) {
-                                    sml_precedent_modal(sml_annex_precedent_index$id[i], sml_annex_precedent_index$title[i])
-                                })
-                            ), # close General Information tabPanel
+                        lapply(seq_len(nrow(sml_annex_precedent_index)), function(i) {
+                            sml_precedent_modal(sml_annex_precedent_index$id[i], sml_annex_precedent_index$title[i])
+                        })
+                    ) # close box
+                ) # close fluidrow
+            ), # close SML Overview tab
 
-                            #### --- Scenario Testing panel ---####
-                            tabPanel(
-                                title = "Scenario Testing", value = "t_sml_scenario",
-                                fluidRow(
+            #### --- Fourth tab content: SML Scenario Testing tab ---####
+            tabItem(
+                tabName = "SML_Scenario",
+                fluidRow(
                     box(
                         width = 12,
                         title = "Part A - fixed EU-level criteria",
@@ -828,11 +828,7 @@ ui <- dashboardPage(
                         uiOutput("sample_classification_table")
                     )
                 )
-                            ) # close Scenario Testing tabPanel
-                        ) # close Tabsetpanel
-                    ) # close box
-                ) # close fluidrow
-            ) # close third tab content
-        ) # close tabitem
+            ) # close SML Scenario Testing tab
+        ) # close tabitems
     ) # close dashboardBody
 ) # close dashboardPage
