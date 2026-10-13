@@ -180,6 +180,95 @@ sml_scenario_variables <- read.csv(
   comment.char = "#", na.strings = c("", "NA"), stringsAsFactors = FALSE
 )
 
+# National-legislation precedent for the 10 Annex I Part A/B rows shown in the SML "General
+# Information" table (ui.R) - a 2026-09/10 AI-assisted first-pass scan, UNVERIFIED, kept in a CSV
+# for the same reason as above. Deliberately has no numeric thresholds (see the CSV's own header
+# comment): the legislative landscape is too heterogeneous across states to present as comparable
+# figures yet. `variable_id` values here are independent of sml_scenario_variables$id - this table
+# has one row per Annex I Part A/B descriptor (10, including "soc_organic", which has no
+# corresponding Scenario Testing variable) rather than per scenario-testing axis (9).
+sml_national_precedent <- read.csv(
+  "config/sml_national_precedent.csv",
+  comment.char = "#", na.strings = c("", "NA"), stringsAsFactors = FALSE
+)
+
+# Clickable "<found>/27" cell for the Annex I table (ui.R). Denominator is always 27 (EU member
+# states), not the row count for this variable - a variable with 3 "found" + 2 "uncertain" rows
+# still has 22 states nobody checked, not 5.
+sml_precedent_link <- function(var_id) {
+  found_n <- sum(sml_national_precedent$variable_id == var_id & sml_national_precedent$status == "found")
+  tags$a(href = "#", `data-toggle` = "modal", `data-target` = paste0("#precedent-modal-", var_id),
+         style = "font-weight:bold; text-decoration:underline; cursor:pointer;",
+         sprintf("%d/27", found_n))
+}
+
+# Bootstrap modal (pure client-side, no server round-trip) listing every state found/uncertain
+# for one Annex I variable, with legislation name, legal category and source link - deliberately
+# no numeric thresholds, see config/sml_national_precedent.csv's own header comment.
+sml_precedent_modal <- function(var_id, title) {
+  rows <- sml_national_precedent[sml_national_precedent$variable_id == var_id, ]
+  rows <- rows[order(rows$status != "found", rows$country), ]
+  n_found <- sum(rows$status == "found")
+  n_uncertain <- sum(rows$status == "uncertain")
+
+  body_rows <- if (nrow(rows) == 0) {
+    list(tags$tr(tags$td(colspan = 4, em("No candidate legislation identified in this scan."))))
+  } else {
+    lapply(seq_len(nrow(rows)), function(i) {
+      r <- rows[i, ]
+      status_style <- if (r$status == "found") "color:#2e7d32; font-weight:bold;" else "color:#b8860b; font-weight:bold;"
+      link_cell <- if (!is.na(r$source_link) && nzchar(r$source_link)) {
+        tags$a(href = r$source_link, target = "_blank", rel = "noopener", "source")
+      } else {
+        tags$span(style = "color:#999;", "no link retrieved")
+      }
+      tags$tr(
+        tags$td(r$country),
+        tags$td(tags$span(style = status_style, if (r$status == "found") "Found" else "Uncertain")),
+        tags$td(r$instrument, tags$br(), tags$span(style = "color:#777; font-size:0.85em;", r$legal_category)),
+        tags$td(link_cell)
+      )
+    })
+  }
+
+  tags$div(class = "modal fade", id = paste0("precedent-modal-", var_id), tabindex = "-1", role = "dialog",
+    tags$div(class = "modal-dialog modal-lg", role = "document",
+      tags$div(class = "modal-content",
+        tags$div(class = "modal-header",
+          tags$button(type = "button", class = "close", `data-dismiss` = "modal", `aria-label` = "Close",
+                      tags$span(`aria-hidden` = "true", HTML("&times;"))),
+          tags$h4(class = "modal-title", title)
+        ),
+        tags$div(class = "modal-body",
+          p(em(sprintf(
+            "%d of 27 EU Member States found with existing legislation touching this variable (any legal domain, not necessarily framed as soil law) - %d more flagged as uncertain, the rest not confirmed either way. Unverified first-pass scan, 2026-09/10. No numeric thresholds recorded - see the note below the main table.",
+            n_found, n_uncertain
+          ))),
+          tags$div(style = "overflow-x:auto;",
+            tags$table(class = "table table-condensed table-striped",
+              tags$thead(tags$tr(tags$th("Country"), tags$th("Status"), tags$th("Legislation / legal category"), tags$th("Source"))),
+              tags$tbody(body_rows)
+            )
+          )
+        )
+      )
+    )
+  )
+}
+
+# Index of the 10 Annex I Part A/B rows this precedent research covers, used by ui.R to generate
+# one modal per variable (see sml_precedent_modal() above) without repeating the title 10 times.
+sml_annex_precedent_index <- data.frame(
+  id = c("ec", "soc_clay", "soc_organic", "bulk_density", "phosphorus",
+         "erosion", "heavy_metals", "water_holding", "ksat_air_capacity", "soc_stock"),
+  title = c("Electrical conductivity (EC)", "SOC concentration - Mineral soils",
+            "SOC concentration - Organic soils", "Bulk density (subsoil)",
+            "Extractable phosphorus", "Soil erosion rate",
+            "Heavy metals and selected organic contaminants", "Soil water holding capacity",
+            "Saturated hydraulic conductivity and air capacity", "SOC stocks"),
+  stringsAsFactors = FALSE
+)
+
 # Okabe-Ito colorblind-safe qualitative palette (already used elsewhere in this app
 # for the macrofauna ecological-group plots) - 8 colors, so scenarios are capped at 8.
 okabe_ito_palette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442",

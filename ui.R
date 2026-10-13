@@ -621,77 +621,96 @@ ui <- dashboardPage(
                                    non-binding ambition is healthy soils across the EU by 2050."),
                                 br(),
                                 h4("Annex I descriptors"),
-                                p(em("Transcribed directly from Annex I of Directive (EU) 2025/2360. The last column
-                                      indicates whether an equivalent variable is available in the MINOTAUR database
-                                      used by this app.")),
+                                p(em("Transcribed directly from Annex I of Directive (EU) 2025/2360. \"Existing
+                                      national precedent\" is a separate, unverified research scan - click a
+                                      number for details; see the note below the table before reading too much
+                                      into it. The last column indicates whether an equivalent variable is
+                                      available in the MINOTAUR database used by this app.")),
+                                div(style = "overflow-x:auto;",
                                 tags$table(
                                     class = "table table-bordered table-striped",
                                     style = "border-spacing: 0 6px; border-collapse: separate;",
                                     tags$thead(
                                         tags$tr(
                                             tags$th("Variable"), tags$th("Description"),
-                                            tags$th("Threshold"), tags$th("Coverage in MINOTAUR DB")
+                                            tags$th("Threshold"), tags$th("Existing national precedent"),
+                                            tags$th("Coverage in MINOTAUR DB")
                                         )
                                     ),
                                     tags$tbody(
-                                        tags$tr(tags$td(colspan = 4, style = "background-color:#dbe9f6; padding-top:14px; padding-bottom:14px;", tags$strong(
+                                        tags$tr(tags$td(colspan = 5, style = "background-color:#dbe9f6; padding-top:14px; padding-bottom:14px;", tags$strong(
                                             "Part A - descriptors with criteria for healthy soil condition established at Union level"
                                         ))),
                                         tags$tr(tags$td("Electrical conductivity (EC)"), tags$td("Salinisation"),
                                                 tags$td("< 4 dS/m (saturated soil paste extract) or equivalent. Exempt: naturally saline land, areas with regular marine flooding, sea-spray areas"),
+                                                tags$td(sml_precedent_link("ec")),
                                                 tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
                                         tags$tr(tags$td(style = "padding-left: 28px;", "SOC concentration - Mineral soils"), tags$td("Loss of soil organic carbon"),
                                                 tags$td("SOC/clay ratio > 1/13"),
+                                                tags$td(sml_precedent_link("soc_clay")),
                                                 tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓†"))),
                                         tags$tr(tags$td(style = "padding-left: 28px;", "SOC concentration - Organic soils"), tags$td("Loss of soil organic carbon"),
                                                 tags$td("National targets set under Regulation (EU) 2024/1991"),
+                                                tags$td(sml_precedent_link("soc_organic")),
                                                 tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
                                         tags$tr(tags$td("Bulk density (subsoil)"), tags$td("Subsoil compaction"),
                                                 tags$td("< 1.47-1.80 g/cm3 depending on soil texture class (5 classes defined). Optional: saturated hydraulic conductivity ≥ 10 cm/day, air capacity ≥ 5%"),
+                                                tags$td(sml_precedent_link("bulk_density")),
                                                 tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓*"))),
 
-                                        tags$tr(tags$td(colspan = 4, style = "background-color:#e2f0e3; padding-top:14px; padding-bottom:14px;", tags$strong(
+                                        tags$tr(tags$td(colspan = 5, style = "background-color:#e2f0e3; padding-top:14px; padding-bottom:14px;", tags$strong(
                                             "Part B - descriptors with criteria for healthy soil condition established at Member State level"
                                         ))),
                                         tags$tr(tags$td("Extractable phosphorus"), tags$td("Excess nutrient content"),
-                                                tags$td("< maximum value set by each Member State"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓"))),
+                                                tags$td("< maximum value set by each Member State"),
+                                                tags$td(sml_precedent_link("phosphorus")),
+                                                tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓"))),
                                         tags$tr(tags$td("Soil erosion rate"), tags$td("Soil erosion"),
-                                                tags$td("< maximum value set by each Member State"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
+                                                tags$td("< maximum value set by each Member State"),
+                                                tags$td(sml_precedent_link("erosion")),
+                                                tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
                                         tags$tr(tags$td("Heavy metals (As, Sb, Cd, Co, Cr, Cu, Hg, Pb, Ni, Tl, V, Zn) and selected organic contaminants"), tags$td("Soil contamination"),
                                                 tags$td("Risk-based: no unacceptable risk to human health/environment (assessed by Member States)"),
+                                                tags$td(sml_precedent_link("heavy_metals")),
                                                 tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
                                         tags$tr(tags$td("Soil water holding capacity"), tags$td("Reduced water retention"),
-                                                tags$td("Above minimal threshold set by Member State"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
+                                                tags$td("Above minimal threshold set by Member State"),
+                                                tags$td(sml_precedent_link("water_holding")),
+                                                tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
                                         tags$tr(tags$td("Saturated hydraulic conductivity and air capacity"), tags$td("Reduced water infiltration"),
-                                                tags$td("Above minimal threshold set by Member State"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
+                                                tags$td("Above minimal threshold set by Member State"),
+                                                tags$td(sml_precedent_link("ksat_air_capacity")),
+                                                tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
                                         tags$tr(tags$td("SOC stocks"), tags$td("Loss of SOC (stock, not concentration)"),
                                                 tags$td("Contribute to national LULUCF targets; > minimum value by soil texture, set by Member State"),
+                                                tags$td(sml_precedent_link("soc_stock")),
                                                 tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
 
-                                        tags$tr(tags$td(colspan = 4, style = "background-color:#faf0dc; padding-top:14px; padding-bottom:14px;", tags$strong(
+                                        tags$tr(tags$td(colspan = 5, style = "background-color:#faf0dc; padding-top:14px; padding-bottom:14px;", tags$strong(
                                             "Part C - descriptors without criteria"
                                         ))),
                                         tags$tr(tags$td("Total nitrogen content / SOC-to-nitrogen ratio"), tags$td("Excess nutrient content"),
-                                                tags$td("No threshold"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓†"))),
+                                                tags$td("No threshold"), tags$td("—"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓†"))),
                                         tags$tr(tags$td("Soil pH (optional: base saturation)"), tags$td("Acidification"),
-                                                tags$td("No threshold"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓"))),
+                                                tags$td("No threshold"), tags$td("—"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓"))),
                                         tags$tr(tags$td("Bulk density (topsoil)"), tags$td("Topsoil compaction"),
-                                                tags$td("No threshold"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓*"))),
+                                                tags$td("No threshold"), tags$td("—"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓*"))),
                                         tags$tr(tags$td("DNA metabarcoding for fungi and bacteria (mandatory); optional: nematode/earthworm/springtail/ant abundance and diversity, QBS-ar, PLFA, archaea/protist/animal metabarcoding, basal respiration, invasive species"),
                                                 tags$td("Loss of soil biodiversity"),
-                                                tags$td("No threshold"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓✓✓"))),
+                                                tags$td("No threshold"), tags$td("—"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓✓✓"))),
                                         tags$tr(tags$td("PFAS-21/PFAS-43, pesticide active substances and metabolites"), tags$td("Soil contamination (emerging)"),
-                                                tags$td("No threshold"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
+                                                tags$td("No threshold"), tags$td("—"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
 
-                                        tags$tr(tags$td(colspan = 4, style = "background-color:#e8e6f0; padding-top:14px; padding-bottom:14px;", tags$strong(
+                                        tags$tr(tags$td(colspan = 5, style = "background-color:#e8e6f0; padding-top:14px; padding-bottom:14px;", tags$strong(
                                             "Part D - soil sealing and soil removal indicators"
                                         ))),
                                         tags$tr(tags$td("Sealed soil and soil-removal area (km2, % of Member State surface)"), tags$td("Soil sealing and removal"),
-                                                tags$td("No numeric threshold - tracked over time"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
+                                                tags$td("No numeric threshold - tracked over time"), tags$td("—"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
                                         tags$tr(tags$td("Settlement area and land-use change to/from settlement (km2, % of Member State surface)"), tags$td("Land take"),
-                                                tags$td("No numeric threshold - tracked over time"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗")))
+                                                tags$td("No numeric threshold - tracked over time"), tags$td("—"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗")))
                                     )
-                                ),
+                                )
+                                ), # close overflow-x wrapper
                                 p(em("* MINOTAUR records a single bulk density value that does not distinguish
                                       topsoil from subsoil layers.")),
                                 p(em("† MINOTAUR has the underlying variables (SOC and clay content; total nitrogen
@@ -700,7 +719,19 @@ ui <- dashboardPage(
                                 p(em("For Part B, and for the water/erosion/contamination criteria, the Directive
                                       requires each Member State to set the actual numeric maximum, minimum or
                                       threshold value; for Part A, the numeric criteria shown above are fixed
-                                      directly in Annex I of the Directive itself."))
+                                      directly in Annex I of the Directive itself.")),
+                                p(style = "color:#8a6d00;", em("\"Existing national precedent\" counts EU Member
+                                      States where ANY existing national legislation - in any legal domain,
+                                      not necessarily soil law - already touches this variable, independent of
+                                      the SML. This comes from an AI-assisted research pass (Sept-Oct 2026),
+                                      not from the Directive, and has not been independently verified: treat
+                                      every entry as a lead to check against the official source, not a citable
+                                      fact. Numeric thresholds are deliberately not shown - the legislative
+                                      landscape is too heterogeneous (different units, extraction methods and
+                                      quantities across states) to present as comparable figures yet.")),
+                                lapply(seq_len(nrow(sml_annex_precedent_index)), function(i) {
+                                    sml_precedent_modal(sml_annex_precedent_index$id[i], sml_annex_precedent_index$title[i])
+                                })
                             ), # close General Information tabPanel
 
                             #### --- Scenario Testing panel ---####
