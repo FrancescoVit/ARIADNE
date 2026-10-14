@@ -778,6 +778,9 @@ ui <- dashboardPage(
                         p(em("Optional. Upload a CSV of your own samples to plot them as points against the
                               scenarios above. The file is only held in your browser session - it is never
                               written to disk or shared, and disappears when the session ends.")),
+                        p(em("You can add your own extra columns (land use, treatment, site, ...) beyond the
+                              SML variables - any categorical one becomes available below as a way to
+                              colour/group the samples in the plot.")),
                         tags$a(href = "sml_scenario_template.csv", download = NA,
                                icon("download"), " Download CSV template"),
                         br(), br(),
@@ -791,6 +794,7 @@ ui <- dashboardPage(
                         title = "Healthy soil space",
                         status = "primary", solidHeader = TRUE, collapsible = TRUE,
                         uiOutput("scenario_plot_type_selector"),
+                        uiOutput("scenario_groupby_selector"),
                         conditionalPanel(
                             condition = "input.scenario_plot_type == 'radar' || input.scenario_plot_type == null",
                             radioButtons("scenario_view_mode", label = NULL,

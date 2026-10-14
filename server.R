@@ -1741,6 +1741,41 @@ server <- function(input, output) {
     if (is.null(df)) 0 else nrow(df)
   })
 
+  # Any upload column that isn't sample_id or a known SML variable is user-supplied
+  # metadata (land use, treatment, site, ...) - not fixed in name or count, so this
+  # is computed from whatever the file actually has, not a config list.
+  uploaded_metadata_columns <- reactive({
+    df <- uploaded_samples()
+    if (is.null(df)) return(character(0))
+    setdiff(colnames(df), c("sample_id", sml_scenario_variables$id))
+  })
+
+  # Only categorical metadata columns are offered for colouring/grouping for now
+  # (see scenario_testing_roadmap note) - a column is categorical here if it isn't
+  # cleanly numeric, mirroring the numeric/categorical split already used
+  # throughout the MINOTAUR Analysis tab (is.character() on the chosen column).
+  uploaded_categorical_metadata_columns <- reactive({
+    cols <- uploaded_metadata_columns()
+    if (length(cols) == 0) return(character(0))
+    df <- uploaded_samples()
+    is_cat <- vapply(cols, function(col) {
+      raw <- as.character(df[[col]])
+      raw <- raw[!is.na(raw) & nzchar(raw)]
+      if (length(raw) == 0) return(FALSE)
+      any(is.na(suppressWarnings(as.numeric(raw))))
+    }, logical(1))
+    cols[is_cat]
+  })
+
+  output$scenario_groupby_selector <- renderUI({
+    cols <- uploaded_categorical_metadata_columns()
+    if (length(cols) == 0) return(NULL)
+    choices <- c("(none)" = "", setNames(cols, cols))
+    current <- isolate(input$scenario_groupby)
+    selected <- if (!is.null(current) && current %in% choices) current else ""
+    selectInput("scenario_groupby", "Colour/group samples by", choices = choices, selected = selected)
+  })
+
   output$scenario_plot_type_selector <- renderUI({
     n <- n_uploaded()
     if (n > 20) {
@@ -1760,14 +1795,25 @@ server <- function(input, output) {
 
   # Long-format sample values, one row per (sample, variable) - feeds the
   # histogram/violin plots. Not used by the radar, which only needs positions.
+  # `group` is the chosen metadata column's value for that sample, repeated once
+  # per variable block (same row order as df) - constant "All samples" when no
+  # grouping is selected, so downstream plotting code never needs to branch on
+  # whether grouping is active, just on how many levels `group` actually has.
   sample_values_long <- reactive({
     df <- uploaded_samples()
     validate(need(!is.null(df) && nrow(df) > 0, "Upload a CSV to see this view."))
     all_vars <- sml_scenario_variables
+    groupby <- input$scenario_groupby
+    group_vals <- if (!is.null(groupby) && nzchar(groupby) && groupby %in% colnames(df)) {
+      g <- as.character(df[[groupby]])
+      ifelse(is.na(g) | !nzchar(g), "(blank)", g)
+    } else {
+      rep("All samples", nrow(df))
+    }
     rows <- lapply(seq_len(nrow(all_vars)), function(i) {
       v <- all_vars[i, ]
       vals <- if (v$id %in% colnames(df)) suppressWarnings(as.numeric(df[[v$id]])) else rep(NA_real_, nrow(df))
-      data.frame(variable = v$label, value = vals, stringsAsFactors = FALSE)
+      data.frame(variable = v$label, value = vals, group = group_vals, stringsAsFactors = FALSE)
     })
     out <- do.call(rbind, rows)
     out$variable <- factor(out$variable, levels = all_vars$label)
@@ -1852,10 +1898,23 @@ server <- function(input, output) {
         sprintf("Missing columns (treated as not available for every sample): %s",
                 paste(missing_cols, collapse = ", ")))))
     }
-    unknown_cols <- setdiff(colnames(df), c("sample_id", sml_scenario_variables$id))
-    if (length(unknown_cols) > 0) {
-      msgs <- c(msgs, list(p(style = "color:#888;",
-        sprintf("Unrecognized columns ignored: %s", paste(unknown_cols, collapse = ", ")))))
+    metadata_cols <- uploaded_metadata_columns()
+    if (length(metadata_cols) > 0) {
+      categorical_cols <- uploaded_categorical_metadata_columns()
+      numeric_only <- setdiff(metadata_cols, categorical_cols)
+      msgs <- c(msgs, list(p(style = "color:#2e7d32;",
+        sprintf("Extra column(s) found, treated as metadata (not an SML variable): %s.%s",
+                paste(metadata_cols, collapse = ", "),
+                if (length(categorical_cols) > 0) {
+                  sprintf(" Available to colour/group plots by: %s.", paste(categorical_cols, collapse = ", "))
+                } else {
+                  ""
+                }))))
+      if (length(numeric_only) > 0) {
+        msgs <- c(msgs, list(p(style = "color:#888;",
+          sprintf("%s looks numeric - grouping by a numeric column isn't supported yet, so it's kept but not offered as a group-by option.",
+                  paste(numeric_only, collapse = ", ")))))
+      }
     }
 
     # Value-level checks: type (non-numeric garbage) and plausibility (likely unit
@@ -1948,28 +2007,56 @@ server <- function(input, output) {
       color_lookup <- unique(thr[, c("scenario", "color")])
       color_vec <- setNames(color_lookup$color, color_lookup$scenario)
 
+      # "All samples" (the only level when no metadata grouping is selected) keeps
+      # the plot's original single fixed colour; a real grouping gets one Okabe-Ito
+      # colour per level, recycled if there are more levels than the palette.
+      group_levels <- sort(unique(vals$group))
+      grouped <- length(group_levels) > 1 || !identical(group_levels, "All samples")
+      group_colors <- if (!grouped) {
+        c("All samples" = "#2C7FB8")
+      } else {
+        setNames(rep_len(okabe_ito_palette, length(group_levels)), group_levels)
+      }
+      groupby_label <- input$scenario_groupby
+      legend_title <- if (!is.null(groupby_label) && nzchar(groupby_label)) groupby_label else NULL
+
       if (plot_type == "histogram") {
-        ggplot(vals, aes(x = value)) +
-          geom_histogram(bins = 15, fill = "#2C7FB8", alpha = 0.7, color = "white", na.rm = TRUE) +
+        p <- if (!grouped) {
+          ggplot(vals, aes(x = value)) +
+            geom_histogram(bins = 15, fill = "#2C7FB8", alpha = 0.7, color = "white", na.rm = TRUE)
+        } else {
+          ggplot(vals, aes(x = value, fill = group)) +
+            geom_histogram(bins = 15, alpha = 0.6, color = "white", position = "identity", na.rm = TRUE) +
+            scale_fill_manual(values = group_colors)
+        }
+        p +
           geom_vline(data = thr, aes(xintercept = thr, color = scenario),
                      linetype = "dashed", linewidth = 0.8, na.rm = TRUE) +
           scale_color_manual(values = color_vec) +
           facet_wrap(~variable, scales = "free_x", ncol = 3) +
           theme_bw() +
-          theme(strip.text = element_text(size = 9), legend.title = element_blank()) +
-          labs(x = NULL, y = "count")
+          theme(strip.text = element_text(size = 9)) +
+          labs(x = NULL, y = "count", color = NULL, fill = legend_title)
       } else {
-        ggplot(vals, aes(x = 1, y = value)) +
-          geom_violin(fill = "#2C7FB8", alpha = 0.5, color = "#2C7FB8", trim = FALSE, na.rm = TRUE) +
+        p <- if (!grouped) {
+          ggplot(vals, aes(x = 1, y = value)) +
+            geom_violin(fill = "#2C7FB8", alpha = 0.5, color = "#2C7FB8", trim = FALSE, na.rm = TRUE)
+        } else {
+          ggplot(vals, aes(x = group, y = value, fill = group)) +
+            geom_violin(alpha = 0.5, color = NA, trim = FALSE, na.rm = TRUE) +
+            scale_fill_manual(values = group_colors)
+        }
+        p +
           geom_jitter(width = 0.15, height = 0, alpha = 0.3, size = 0.8, na.rm = TRUE) +
           geom_hline(data = thr, aes(yintercept = thr, color = scenario),
                      linetype = "dashed", linewidth = 0.8, na.rm = TRUE) +
           scale_color_manual(values = color_vec) +
           facet_wrap(~variable, scales = "free_y", ncol = 3) +
           theme_bw() +
-          theme(strip.text = element_text(size = 9), axis.text.x = element_blank(),
-                axis.ticks.x = element_blank(), legend.title = element_blank()) +
-          labs(x = NULL, y = NULL)
+          theme(strip.text = element_text(size = 9),
+                axis.text.x = if (grouped) element_text(size = 7) else element_blank(),
+                axis.ticks.x = if (grouped) element_line() else element_blank()) +
+          labs(x = NULL, y = NULL, color = NULL, fill = legend_title)
       }
 
     } else {
@@ -2076,6 +2163,13 @@ server <- function(input, output) {
       } else {
         paste("Row", seq_len(nrow(samples_df)))
       }
+      groupby <- input$scenario_groupby
+      sample_groups <- if (!is.null(groupby) && nzchar(groupby) && groupby %in% colnames(samples_df)) {
+        g <- as.character(samples_df[[groupby]])
+        ifelse(is.na(g) | !nzchar(g), "(blank)", g)
+      } else {
+        rep("All samples", nrow(samples_df))
+      }
       point_rows <- do.call(rbind, lapply(seq_len(nrow(samples_df)), function(r) {
         do.call(rbind, lapply(seq_len(n_vars), function(i) {
           v <- all_vars[i, ]
@@ -2084,15 +2178,29 @@ server <- function(input, output) {
           if (is.na(raw_val)) return(NULL)
           rng <- axis_range[[v$id]]
           if (raw_val < rng[1] || raw_val > rng[2]) return(NULL)
-          data.frame(sample = sample_ids[r], variable = v$label,
+          data.frame(sample = sample_ids[r], variable = v$label, group = sample_groups[r],
                      position = normalize(raw_val, v$id), stringsAsFactors = FALSE)
         }))
       }))
       if (!is.null(point_rows) && nrow(point_rows) > 0) {
         point_rows$variable <- factor(point_rows$variable, levels = all_vars$label)
-        p <- p + geom_point(data = point_rows, aes(x = variable, y = position, group = sample),
-                             inherit.aes = FALSE, shape = 1, size = 2.2,
-                             color = "black", stroke = 0.9)
+        group_levels <- sort(unique(point_rows$group))
+        grouped <- length(group_levels) > 1 || !identical(group_levels, "All samples")
+        point_colors <- if (!grouped) {
+          c("All samples" = "black")
+        } else {
+          setNames(rep_len(okabe_ito_palette, length(group_levels)), group_levels)
+        }
+        legend_title <- if (!is.null(groupby) && nzchar(groupby)) groupby else NULL
+        # A second, independent colour scale (ggnewscale) - the scenario polygons/
+        # lines above already own the plot's main colour scale; without this, one
+        # scale_colour_manual() would silently overwrite the other instead of the
+        # two coexisting as separate legends.
+        p <- p + ggnewscale::new_scale_color() +
+          geom_point(data = point_rows, aes(x = variable, y = position, group = sample, color = group),
+                     inherit.aes = FALSE, shape = 1, size = 2.2, stroke = 0.9) +
+          scale_color_manual(values = point_colors, guide = if (grouped) "legend" else "none") +
+          labs(color = legend_title)
       }
     }
 

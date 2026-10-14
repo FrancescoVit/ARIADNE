@@ -31,7 +31,8 @@
 ######################################################################################################
 
 
-packages <- c("shiny", "shinydashboard", "tidyverse", "plotly", "rstatix", "maps", "shinythemes")
+packages <- c("shiny", "shinydashboard", "tidyverse", "plotly", "rstatix", "maps", "shinythemes",
+              "ggnewscale")
 
 missing <- setdiff(packages, rownames(installed.packages()))
 if (length(missing) > 0) {
