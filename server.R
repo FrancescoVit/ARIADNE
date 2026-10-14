@@ -2074,10 +2074,10 @@ server <- function(input, output) {
       } else {
         p <- if (!grouped) {
           ggplot(vals, aes(x = 1, y = value)) +
-            geom_violin(fill = "#2C7FB8", alpha = 0.5, color = "#2C7FB8", trim = FALSE, na.rm = TRUE)
+            geom_violin(fill = "#2C7FB8", alpha = 0.5, color = "gray20", trim = FALSE, na.rm = TRUE)
         } else {
           ggplot(vals, aes(x = group, y = value, fill = group)) +
-            geom_violin(alpha = 0.5, color = NA, trim = FALSE, na.rm = TRUE) +
+            geom_violin(alpha = 0.5, color = "gray20", trim = FALSE, na.rm = TRUE) +
             scale_fill_manual(values = group_colors)
         }
         p +
@@ -2230,15 +2230,19 @@ server <- function(input, output) {
           setNames(rep_len(group_palette, length(group_levels)), group_levels)
         }
         legend_title <- groupby
-        # A second, independent colour scale (ggnewscale) - the scenario polygons/
-        # lines above already own the plot's main colour scale; without this, one
-        # scale_colour_manual() would silently overwrite the other instead of the
-        # two coexisting as separate legends.
-        p <- p + ggnewscale::new_scale_color() +
-          geom_point(data = point_rows, aes(x = variable, y = position, group = sample, color = group),
-                     inherit.aes = FALSE, shape = 1, size = 2.2, stroke = 0.9) +
-          scale_color_manual(values = point_colors, guide = if (grouped) "legend" else "none") +
-          labs(color = legend_title)
+        # Filled points (shape 21): a solid fill reads much better than a hollow
+        # outline once there's a busy overlay of polygons/paths behind it, which
+        # is exactly the "hard to see in overlay" complaint this was changed for.
+        # Border is a fixed gray20 (same as the histogram bars), not mapped, so it
+        # needs no scale of its own; fill IS mapped to group, and that collides
+        # with the scenario polygons' own fill scale above without a second,
+        # independent one (ggnewscale) - the two then coexist as separate legends
+        # instead of one silently overwriting the other.
+        p <- p + ggnewscale::new_scale_fill() +
+          geom_point(data = point_rows, aes(x = variable, y = position, group = sample, fill = group),
+                     inherit.aes = FALSE, shape = 21, size = 2.6, color = "gray20", stroke = 0.6) +
+          scale_fill_manual(values = point_colors, guide = if (grouped) "legend" else "none") +
+          labs(fill = legend_title)
       }
     }
 
