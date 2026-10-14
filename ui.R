@@ -792,6 +792,8 @@ ui <- dashboardPage(
                               Uploading a new file always switches back to it.")),
                         actionButton("use_minotaur_selection", "Use current MINOTAUR samples selection",
                                      icon = icon("database")),
+                        actionButton("clear_sml_samples", "Clear sample data",
+                                     icon = icon("broom")),
                         br(), br(),
                         uiOutput("sml_data_source_status"),
                         uiOutput("sample_upload_warnings")

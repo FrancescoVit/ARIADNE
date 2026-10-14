@@ -1724,12 +1724,15 @@ server <- function(input, output) {
   # Uploaded samples are read straight from the temp path Shiny gives the file -
   # never written anywhere else, never persisted beyond this session.
   # Which data source Scenario Testing is currently reading from - "upload" (a
-  # user CSV) or "minotaur" (the live MINOTAUR selection from Overview's
-  # sites_selected_reactive()). A fresh upload always switches back to "upload"
-  # mode, so there's no separate "go back" control to add.
+  # user CSV), "minotaur" (the live MINOTAUR selection from Overview's
+  # sites_selected_reactive()), or "none" (cleared, so only the scenarios/
+  # thresholds remain). A fresh upload or a MINOTAUR-selection click always
+  # switches away from "none", so there's no separate "go back" control needed
+  # beyond re-doing whichever of those two the user wants.
   rv_sml_source <- reactiveValues(mode = "upload")
   observeEvent(input$use_minotaur_selection, { rv_sml_source$mode <- "minotaur" })
   observeEvent(input$sample_upload, { rv_sml_source$mode <- "upload" })
+  observeEvent(input$clear_sml_samples, { rv_sml_source$mode <- "none" })
 
   # The current MINOTAUR/Overview selection, reshaped into the same shape a
   # CSV upload would have: sample_id + whichever sml_scenario_variables columns
@@ -1770,6 +1773,7 @@ server <- function(input, output) {
     # every other reactive/output in this file reads this one, never the file
     # input or sites_selected_reactive() directly, so the upload-vs-MINOTAUR
     # switch only has to happen here.
+    if (identical(rv_sml_source$mode, "none")) return(NULL)
     if (identical(rv_sml_source$mode, "minotaur")) {
       return(minotaur_samples_for_sml())
     }
@@ -1861,7 +1865,9 @@ server <- function(input, output) {
   # grouping is selected, so downstream plotting code never needs to branch on
   # whether grouping is active, just on how many levels `group` actually has.
   no_samples_message <- function() {
-    if (identical(rv_sml_source$mode, "minotaur")) {
+    if (identical(rv_sml_source$mode, "none")) {
+      "No sample data loaded - upload a CSV or use the current MINOTAUR selection to see this view."
+    } else if (identical(rv_sml_source$mode, "minotaur")) {
       "No MINOTAUR samples match the current Overview filters - adjust them, or upload a CSV instead."
     } else {
       "Upload a CSV to see this view."
@@ -1969,6 +1975,10 @@ server <- function(input, output) {
   })
 
   output$sml_data_source_status <- renderUI({
+    if (identical(rv_sml_source$mode, "none")) {
+      return(p(style = "color:#888;", icon("broom"),
+               " No sample data loaded - showing scenarios/thresholds only."))
+    }
     df <- uploaded_samples()
     n <- if (is.null(df)) 0 else nrow(df)
     if (identical(rv_sml_source$mode, "minotaur")) {
