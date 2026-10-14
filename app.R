@@ -1,5 +1,5 @@
 # shARed mInotAur Database exploratioN Environment : ARIADNE
-# Version: 4.2
+# Version: 4.3
 # Author:
 # Francesco Vitali §
 # Mocali Stefano §
