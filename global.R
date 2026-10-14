@@ -89,7 +89,15 @@ metadata_MINOTAUR_selected <- metadata_MINOTAUR_selected %>%
     year_precipitation = as.numeric(year_precipitation),
     caco3 = as.numeric(caco3)
   ) %>%
-  mutate(across(where(is.character), ~na_if(., "na")))
+  mutate(across(where(is.character), ~na_if(., "na"))) %>%
+  # 9999 is a missing-data sentinel in the raw source files, confirmed present in
+  # these three numeric columns (checked 2026-10-14 while wiring up the SML
+  # Scenario Testing "use MINOTAUR selection" feature - e.g. a physically
+  # impossible bulk_density of 9999 g/cm3) and left uncaught by the cleanup
+  # above, which only replaces the literal string "na" on character columns.
+  # Not applied blanket-wide to every numeric column - only these three were
+  # actually checked and found to contain it.
+  mutate(across(c(bulk_density, sand, silt), ~na_if(as.numeric(.), 9999)))
 
 
 # Preparing different set of data

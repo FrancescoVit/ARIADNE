@@ -11,14 +11,21 @@
 #   direction      - "below": healthy when value <= threshold; "above": healthy when value >= threshold
 #   fixed_value    - EU-mandated threshold (Part A only, same for every scenario); blank for Part B,
 #                    where the threshold is instead entered per scenario in the app
-#   minotaur_column - matching column name in the raw MINOTAUR data (NOT used yet - placeholder for a
-#                    future feature classifying real MINOTAUR samples); blank where no match exists
+#   minotaur_column - matching column name in the raw MINOTAUR data, used by the "Use current
+#                    MINOTAUR samples selection" feature (server.R, minotaur_samples_for_sml());
+#                    blank where no single matching column exists. soc_clay is blank here even
+#                    though it IS supported by that feature - it's derived from soc_mean and
+#                    texture (sand/silt) via a formula, not a direct column rename, so it doesn't
+#                    fit this one-column-name field; see minotaur_samples_for_sml() for the formula.
 #   plausible_min/plausible_max - DRAFT range used only for the CSV-upload sanity-check warning
 #                    (catches likely unit mistakes). NOT a legal or scientific threshold - rough
-#                    agronomic ballpark figures pending review by colleagues.
+#                    agronomic ballpark figures pending review by colleagues. soc_clay's max was
+#                    widened 0->1 to 0->10 on 2026-10-14 after finding real MINOTAUR sites (low-clay
+#                    sandy/silty soils with moderate organic matter) with a genuine ratio up to ~5.2 -
+#                    the original 0-1 draft range was simply too narrow, not a sign of bad data.
 id,label,unit,part,direction,fixed_value,minotaur_column,plausible_min,plausible_max
 ec,Electrical conductivity,dS/m,A,below,4,,0,20
-soc_clay,SOC/clay ratio,ratio,A,above,0.0769230769,,0,1
+soc_clay,SOC/clay ratio,ratio,A,above,0.0769230769,,0,10
 bulk_density,Bulk density (subsoil),g/cm3,A,below,1.80,bulk_density,0.5,2.2
 phosphorus,Extractable phosphorus,mg/kg,B,below,,phosphorus_available,0,500
 erosion,Soil erosion rate,t/ha/yr,B,below,,,0,50
