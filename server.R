@@ -2225,7 +2225,7 @@ server <- function(input, output) {
         group_levels <- sort(unique(point_rows$group))
         grouped <- length(group_levels) > 1 || !identical(group_levels, "All samples")
         point_colors <- if (!grouped) {
-          c("All samples" = "black")
+          c("All samples" = "grey60")
         } else {
           setNames(rep_len(group_palette, length(group_levels)), group_levels)
         }
