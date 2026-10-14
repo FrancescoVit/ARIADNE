@@ -1770,7 +1770,7 @@ server <- function(input, output) {
   output$scenario_groupby_selector <- renderUI({
     cols <- uploaded_categorical_metadata_columns()
     if (length(cols) == 0) return(NULL)
-    choices <- c("(none)" = "", setNames(cols, cols))
+    choices <- c("None" = "", setNames(cols, cols))
     current <- isolate(input$scenario_groupby)
     selected <- if (!is.null(current) && current %in% choices) current else ""
     selectInput("scenario_groupby", "Colour/group samples by", choices = choices, selected = selected)
