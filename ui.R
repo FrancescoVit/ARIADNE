@@ -1,5 +1,5 @@
 # shARed mInotAur Database exploratioN Environment : ARIADNE
-# Version: 4.2
+# Version: 4.3
 # Author:
 # Francesco Vitali §
 # Mocali Stefano §
@@ -45,9 +45,12 @@ ui <- dashboardPage(
         width = 230,
         sidebarMenu(
             menuItem("Home", tabName = "Home", icon = icon("house")),
+            tags$li(class = "header", "MINOTAUR DATABASE"),
             menuItem("Overview", tabName = "Overview", icon = icon("dashboard")),
             menuItem("Analysis", tabName = "Analysis", icon = icon("magnifying-glass-chart")),
-            menuItem("SML", tabName = "SML", icon = icon("gavel"))
+            tags$li(class = "header", "SOIL MONITORING LAW"),
+            menuItem("Overview", tabName = "SML_Overview", icon = icon("gavel")),
+            menuItem("Scenario testing", tabName = "SML_Scenario", icon = icon("sliders"))
         )
     ),
 
@@ -97,7 +100,7 @@ ui <- dashboardPage(
                 box(
                   width = 12,
                   align = "center",
-                  h1("Welcome to ARIADNE version 4.2"),
+                  h1("Welcome to ARIADNE version 4.3"),
                   br(),
                   br(),
                   h4("Welcome to the shARed mInotAur Database exploratioN Environment, or in short ARIADNE."),
@@ -108,15 +111,16 @@ ui <- dashboardPage(
                   br(),
                   br(),
                   br(),
-                  h4("There are three main modules in ARIADNE: The Overview, the Analysis, and the SML module."),
-                  h4("The Overview module is used to filter the database records on the basis of different metadata (i.e. land use, management,
+                  h4("ARIADNE is organized in the sidebar into two sections: MINOTAUR DATABASE and SOIL MONITORING LAW. Each has its own
+                     Overview module, so check the section header above a menu entry to tell them apart."),
+                  h4("In the MINOTAUR DATABASE section, the Overview module is used to filter the database records on the basis of different metadata (i.e. land use, management,
                      country, and biota group) and to visualize the number of selected records, their geographical distribution, and their
                      distribution per Member State. Records that are filtered in the Overview module, are used to display analysis in the Analysis module"),
                   h4("The Analysis module is used to show the actual analysis on the selected records. Here analysis are organized based on different indices
                      and on different level of soil biota"),
-                  h4("The SML module provides background information on the EU Soil Monitoring Law (Directive (EU) 2025/2360) and its Annex I soil
-                     descriptors, together with a Scenario Testing tool where you can define and compare different sets of national thresholds and,
-                     optionally, test them against your own uploaded sample data")
+                  h4("In the SOIL MONITORING LAW section, the Overview module provides background information on the EU Soil Monitoring Law (Directive (EU) 2025/2360) and its Annex I soil
+                     descriptors, together with a summary of existing national legislation touching each descriptor. The Scenario Testing module lets you define and compare different
+                     sets of national thresholds and, optionally, test them against your own uploaded sample data")
                   )
                 ),
               fluidRow(
@@ -583,18 +587,13 @@ ui <- dashboardPage(
                 ) # close fluidrow
             ), # close second tab content
 
-            #### --- Third tab content: SML tab ---####
+            #### --- Third tab content: SML Overview tab ---####
             tabItem(
-                tabName = "SML",
+                tabName = "SML_Overview",
                 fluidRow(
                     box(
                         width = 12,
-                        tabsetPanel(
-                            type = "tabs", id = "sml_tab",
-                            #### --- General Information panel ---####
-                            tabPanel(
-                                title = "General Information", value = "t_sml_info",
-                                br(),
+                        br(),
                                 h4("Sources"),
                                 tags$ul(
                                     tags$li(tags$a(href = "https://eur-lex.europa.eu/eli/dir/2025/2360/oj/eng",
@@ -621,77 +620,96 @@ ui <- dashboardPage(
                                    non-binding ambition is healthy soils across the EU by 2050."),
                                 br(),
                                 h4("Annex I descriptors"),
-                                p(em("Transcribed directly from Annex I of Directive (EU) 2025/2360. The last column
-                                      indicates whether an equivalent variable is available in the MINOTAUR database
-                                      used by this app.")),
+                                p(em("Transcribed directly from Annex I of Directive (EU) 2025/2360. \"Existing
+                                      national precedent\" is a separate, unverified research scan - click a
+                                      number for details; see the note below the table before reading too much
+                                      into it. The last column indicates whether an equivalent variable is
+                                      available in the MINOTAUR database used by this app.")),
+                                div(style = "overflow-x:auto;",
                                 tags$table(
                                     class = "table table-bordered table-striped",
                                     style = "border-spacing: 0 6px; border-collapse: separate;",
                                     tags$thead(
                                         tags$tr(
                                             tags$th("Variable"), tags$th("Description"),
-                                            tags$th("Threshold"), tags$th("Coverage in MINOTAUR DB")
+                                            tags$th("Threshold"), tags$th("Existing national precedent"),
+                                            tags$th("Coverage in MINOTAUR DB")
                                         )
                                     ),
                                     tags$tbody(
-                                        tags$tr(tags$td(colspan = 4, style = "background-color:#dbe9f6; padding-top:14px; padding-bottom:14px;", tags$strong(
+                                        tags$tr(tags$td(colspan = 5, style = "background-color:#dbe9f6; padding-top:14px; padding-bottom:14px;", tags$strong(
                                             "Part A - descriptors with criteria for healthy soil condition established at Union level"
                                         ))),
                                         tags$tr(tags$td("Electrical conductivity (EC)"), tags$td("Salinisation"),
                                                 tags$td("< 4 dS/m (saturated soil paste extract) or equivalent. Exempt: naturally saline land, areas with regular marine flooding, sea-spray areas"),
+                                                tags$td(sml_precedent_link("ec")),
                                                 tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
                                         tags$tr(tags$td(style = "padding-left: 28px;", "SOC concentration - Mineral soils"), tags$td("Loss of soil organic carbon"),
                                                 tags$td("SOC/clay ratio > 1/13"),
+                                                tags$td(sml_precedent_link("soc_clay")),
                                                 tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓†"))),
                                         tags$tr(tags$td(style = "padding-left: 28px;", "SOC concentration - Organic soils"), tags$td("Loss of soil organic carbon"),
                                                 tags$td("National targets set under Regulation (EU) 2024/1991"),
+                                                tags$td(sml_precedent_link("soc_organic")),
                                                 tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
                                         tags$tr(tags$td("Bulk density (subsoil)"), tags$td("Subsoil compaction"),
                                                 tags$td("< 1.47-1.80 g/cm3 depending on soil texture class (5 classes defined). Optional: saturated hydraulic conductivity ≥ 10 cm/day, air capacity ≥ 5%"),
+                                                tags$td(sml_precedent_link("bulk_density")),
                                                 tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓*"))),
 
-                                        tags$tr(tags$td(colspan = 4, style = "background-color:#e2f0e3; padding-top:14px; padding-bottom:14px;", tags$strong(
+                                        tags$tr(tags$td(colspan = 5, style = "background-color:#e2f0e3; padding-top:14px; padding-bottom:14px;", tags$strong(
                                             "Part B - descriptors with criteria for healthy soil condition established at Member State level"
                                         ))),
                                         tags$tr(tags$td("Extractable phosphorus"), tags$td("Excess nutrient content"),
-                                                tags$td("< maximum value set by each Member State"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓"))),
+                                                tags$td("< maximum value set by each Member State"),
+                                                tags$td(sml_precedent_link("phosphorus")),
+                                                tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓"))),
                                         tags$tr(tags$td("Soil erosion rate"), tags$td("Soil erosion"),
-                                                tags$td("< maximum value set by each Member State"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
+                                                tags$td("< maximum value set by each Member State"),
+                                                tags$td(sml_precedent_link("erosion")),
+                                                tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
                                         tags$tr(tags$td("Heavy metals (As, Sb, Cd, Co, Cr, Cu, Hg, Pb, Ni, Tl, V, Zn) and selected organic contaminants"), tags$td("Soil contamination"),
                                                 tags$td("Risk-based: no unacceptable risk to human health/environment (assessed by Member States)"),
+                                                tags$td(sml_precedent_link("heavy_metals")),
                                                 tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
                                         tags$tr(tags$td("Soil water holding capacity"), tags$td("Reduced water retention"),
-                                                tags$td("Above minimal threshold set by Member State"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
+                                                tags$td("Above minimal threshold set by Member State"),
+                                                tags$td(sml_precedent_link("water_holding")),
+                                                tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
                                         tags$tr(tags$td("Saturated hydraulic conductivity and air capacity"), tags$td("Reduced water infiltration"),
-                                                tags$td("Above minimal threshold set by Member State"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
+                                                tags$td("Above minimal threshold set by Member State"),
+                                                tags$td(sml_precedent_link("ksat_air_capacity")),
+                                                tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
                                         tags$tr(tags$td("SOC stocks"), tags$td("Loss of SOC (stock, not concentration)"),
                                                 tags$td("Contribute to national LULUCF targets; > minimum value by soil texture, set by Member State"),
+                                                tags$td(sml_precedent_link("soc_stock")),
                                                 tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
 
-                                        tags$tr(tags$td(colspan = 4, style = "background-color:#faf0dc; padding-top:14px; padding-bottom:14px;", tags$strong(
+                                        tags$tr(tags$td(colspan = 5, style = "background-color:#faf0dc; padding-top:14px; padding-bottom:14px;", tags$strong(
                                             "Part C - descriptors without criteria"
                                         ))),
                                         tags$tr(tags$td("Total nitrogen content / SOC-to-nitrogen ratio"), tags$td("Excess nutrient content"),
-                                                tags$td("No threshold"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓†"))),
+                                                tags$td("No threshold"), tags$td("—"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓†"))),
                                         tags$tr(tags$td("Soil pH (optional: base saturation)"), tags$td("Acidification"),
-                                                tags$td("No threshold"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓"))),
+                                                tags$td("No threshold"), tags$td("—"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓"))),
                                         tags$tr(tags$td("Bulk density (topsoil)"), tags$td("Topsoil compaction"),
-                                                tags$td("No threshold"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓*"))),
+                                                tags$td("No threshold"), tags$td("—"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓*"))),
                                         tags$tr(tags$td("DNA metabarcoding for fungi and bacteria (mandatory); optional: nematode/earthworm/springtail/ant abundance and diversity, QBS-ar, PLFA, archaea/protist/animal metabarcoding, basal respiration, invasive species"),
                                                 tags$td("Loss of soil biodiversity"),
-                                                tags$td("No threshold"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓✓✓"))),
+                                                tags$td("No threshold"), tags$td("—"), tags$td(tags$span(style = "color:#2e7d32; font-weight:bold;", "✓✓✓"))),
                                         tags$tr(tags$td("PFAS-21/PFAS-43, pesticide active substances and metabolites"), tags$td("Soil contamination (emerging)"),
-                                                tags$td("No threshold"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
+                                                tags$td("No threshold"), tags$td("—"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
 
-                                        tags$tr(tags$td(colspan = 4, style = "background-color:#e8e6f0; padding-top:14px; padding-bottom:14px;", tags$strong(
+                                        tags$tr(tags$td(colspan = 5, style = "background-color:#e8e6f0; padding-top:14px; padding-bottom:14px;", tags$strong(
                                             "Part D - soil sealing and soil removal indicators"
                                         ))),
                                         tags$tr(tags$td("Sealed soil and soil-removal area (km2, % of Member State surface)"), tags$td("Soil sealing and removal"),
-                                                tags$td("No numeric threshold - tracked over time"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
+                                                tags$td("No numeric threshold - tracked over time"), tags$td("—"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗"))),
                                         tags$tr(tags$td("Settlement area and land-use change to/from settlement (km2, % of Member State surface)"), tags$td("Land take"),
-                                                tags$td("No numeric threshold - tracked over time"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗")))
+                                                tags$td("No numeric threshold - tracked over time"), tags$td("—"), tags$td(tags$span(style = "color:#c62828; font-weight:bold;", "✗")))
                                     )
-                                ),
+                                )
+                                ), # close overflow-x wrapper
                                 p(em("* MINOTAUR records a single bulk density value that does not distinguish
                                       topsoil from subsoil layers.")),
                                 p(em("† MINOTAUR has the underlying variables (SOC and clay content; total nitrogen
@@ -700,13 +718,27 @@ ui <- dashboardPage(
                                 p(em("For Part B, and for the water/erosion/contamination criteria, the Directive
                                       requires each Member State to set the actual numeric maximum, minimum or
                                       threshold value; for Part A, the numeric criteria shown above are fixed
-                                      directly in Annex I of the Directive itself."))
-                            ), # close General Information tabPanel
+                                      directly in Annex I of the Directive itself.")),
+                                p(style = "color:#8a6d00;", em("\"Existing national precedent\" counts EU Member
+                                      States where ANY existing national legislation - in any legal domain,
+                                      not necessarily soil law - already touches this variable, independent of
+                                      the SML. This comes from an AI-assisted research pass (Sept-Oct 2026),
+                                      not from the Directive, and has not been independently verified: treat
+                                      every entry as a lead to check against the official source, not a citable
+                                      fact. Numeric thresholds are deliberately not shown - the legislative
+                                      landscape is too heterogeneous (different units, extraction methods and
+                                      quantities across states) to present as comparable figures yet.")),
+                        lapply(seq_len(nrow(sml_annex_precedent_index)), function(i) {
+                            sml_precedent_modal(sml_annex_precedent_index$id[i], sml_annex_precedent_index$title[i])
+                        })
+                    ) # close box
+                ) # close fluidrow
+            ), # close SML Overview tab
 
-                            #### --- Scenario Testing panel ---####
-                            tabPanel(
-                                title = "Scenario Testing", value = "t_sml_scenario",
-                                fluidRow(
+            #### --- Fourth tab content: SML Scenario Testing tab ---####
+            tabItem(
+                tabName = "SML_Scenario",
+                fluidRow(
                     box(
                         width = 12,
                         title = "Part A - fixed EU-level criteria",
@@ -746,10 +778,24 @@ ui <- dashboardPage(
                         p(em("Optional. Upload a CSV of your own samples to plot them as points against the
                               scenarios above. The file is only held in your browser session - it is never
                               written to disk or shared, and disappears when the session ends.")),
+                        p(em("You can add your own extra columns (land use, treatment, site, ...) beyond the
+                              SML variables - any categorical one becomes available below as a way to
+                              colour/group the samples in the plot.")),
                         tags$a(href = "sml_scenario_template.csv", download = NA,
                                icon("download"), " Download CSV template"),
                         br(), br(),
                         fileInput("sample_upload", "Upload CSV", accept = ".csv"),
+                        p(em("Or, instead of uploading a file: classify whichever MINOTAUR sampling points
+                              are currently selected in the Overview tab's filters (land use, management,
+                              country, biota group). Coverage of SML variables in MINOTAUR is sparse, so
+                              expect several \"undetermined\" results - that reflects the data, not an error.
+                              Uploading a new file always switches back to it.")),
+                        actionButton("use_minotaur_selection", "Use current MINOTAUR samples selection",
+                                     icon = icon("database")),
+                        actionButton("clear_sml_samples", "Clear sample data",
+                                     icon = icon("broom")),
+                        br(), br(),
+                        uiOutput("sml_data_source_status"),
                         uiOutput("sample_upload_warnings")
                     )
                 ),
@@ -759,6 +805,7 @@ ui <- dashboardPage(
                         title = "Healthy soil space",
                         status = "primary", solidHeader = TRUE, collapsible = TRUE,
                         uiOutput("scenario_plot_type_selector"),
+                        uiOutput("scenario_groupby_selector"),
                         conditionalPanel(
                             condition = "input.scenario_plot_type == 'radar' || input.scenario_plot_type == null",
                             radioButtons("scenario_view_mode", label = NULL,
@@ -786,22 +833,29 @@ ui <- dashboardPage(
                             condition = "input.sample_table_view_mode == 'aggregated' || input.sample_table_view_mode == null",
                             p(em("Per scenario, per variable: how many uploaded samples meet that variable's
                                   threshold (green), fail it (red), or can't be evaluated (grey) - plus the
-                                  totals and overall % healthy (undetermined samples excluded from that %)."))
+                                  totals and overall % healthy (undetermined samples excluded from that %)."),
+                              em(" This pools every uploaded sample together, regardless of any category you
+                                  may have picked below for the plots - switch to Detailed to see it broken
+                                  down by category."))
                         ),
                         conditionalPanel(
                             condition = "input.sample_table_view_mode == 'detailed'",
-                            p(em("For each uploaded sample and each scenario: green = meets that variable's threshold,
-                                  red = fails it, grey = variable not available for that sample. The last column
-                                  counts healthy/unhealthy/undetermined variables for that sample under that scenario."))
+                            uiOutput("sample_table_detail_mode_selector"),
+                            p(em("Per sample: for each uploaded sample and each scenario, green = meets that
+                                  variable's threshold, red = fails it, grey = variable not available for that
+                                  sample. The last column counts healthy/unhealthy/undetermined variables for
+                                  that sample under that scenario.")),
+                            p(em("Per category (only offered once a \"Colour/group samples by\" column is picked
+                                  below): for each category and each scenario, how many samples in that category
+                                  meet each variable's threshold, shown as healthy/total, with any undetermined
+                                  samples noted alongside rather than counted either way. The last column gives
+                                  the same tally across all variables for that category, with healthy, unhealthy
+                                  and total each coloured separately."))
                         ),
                         uiOutput("sample_classification_table")
                     )
                 )
-                            ) # close Scenario Testing tabPanel
-                        ) # close Tabsetpanel
-                    ) # close box
-                ) # close fluidrow
-            ) # close third tab content
-        ) # close tabitem
+            ) # close SML Scenario Testing tab
+        ) # close tabitems
     ) # close dashboardBody
 ) # close dashboardPage

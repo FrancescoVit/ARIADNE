@@ -1,0 +1,94 @@
+# Draft dataset - AI-assisted legislative scan, run 2026-09-29/10-02, UNVERIFIED pending human check.
+# One row per (SML Annex I Part A/B variable x Member State x legislative finding).
+# status: found = official source fetched and read; uncertain = candidate found but not fully verified.
+# Deliberately excludes numeric thresholds - the legislative landscape is too heterogeneous
+# (different units, extraction methods and quantities) to present as comparable numbers yet.
+# source_link may be empty where no official link was retrieved.
+variable_id,country,status,instrument,legal_category,source_link
+ec,Austria,found,"Deponieverordnung 2008 (DVO 2008), Anhang 1",Waste / landfill law,https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=Bundesnormen&Gesetzesnummer=20005653
+ec,Germany,found,"Ersatzbaustoffverordnung (Mantelverordnung 2021), Anlage 1",Waste / secondary construction material law,https://www.gesetze-im-internet.de/ersatzbaustoffv/BJNR259810021.html
+ec,Hungary,found,Joint Decree 6/2009 (KvVM-EuM-FVM),Groundwater / geological medium protection law,https://net.jogtar.hu/jogszabaly?docid=a0900006.kvv
+ec,Romania,uncertain,Ordin MADR 278/2011; Norma de continut 2002,Agricultural soil monitoring,https://legislatie.just.ro/Public/DetaliiDocumentAfis/134131
+ec,Slovenia,uncertain,Uredba o obremenjevanju tal z vnasanjem odpadkov (UL RS 34/2008),Waste-into-soil / recultivation law,https://pisrs.si/Pis.web/pregledPredpisa?id=URED4791
+soc_clay,Hungary,found,90/2008 (VII.18.) FVM rendelet,Agricultural soil protection law,https://njt.hu/jogszabaly/2008-90-20-82
+soc_clay,Italy,found,Disciplinari di produzione integrata - Tecniche agronomiche (SQNPI),Agri-environment / integrated-production scheme,https://www.fitosanitario.regione.lombardia.it/wps/wcm/connect/5ad93ff9-f46f-45fb-89d7-b0c0524e1f6c/Tecniche+agronomiche+2026+PARTE+GENERALE.pdf
+soc_clay,Germany,uncertain,"Bundes-Bodenschutz- und Altlastenverordnung (BBodSchV), par.6(11)",Soil protection law,https://www.gesetze-im-internet.de/bbodschv_2023/BJNR271600021.html
+soc_clay,Croatia,uncertain,Pravilnik o zastiti poljoprivrednog zemljista od oneciscenja,Agricultural land protection / soil contamination law,https://narodne-novine.nn.hr/clanci/sluzbeni/2010_03_32_745.html
+soc_clay,Slovakia,uncertain,"Zakon c. 220/2004 Z.z., par.7 + Priloha 1 bod 3",Agricultural soil protection law,https://static.slov-lex.sk/static/SK/ZZ/2004/220/vyhlasene_znenie.html
+soc_organic,Germany,found,Bund-Laender-Zielvereinbarung zum Klimaschutz durch Moorbodenschutz; Nationale Moorschutzstrategie,Peatland policy (federal-state agreement),https://www.bundesumweltministerium.de/fileadmin/Daten_BMU/Download_PDF/Naturschutz/blzv_moorbodenschutz_bf.pdf
+soc_organic,Denmark,found,Aftale om et Groent Danmark (Green Tripartite Agreement),Political agreement / climate-land-use policy,https://regeringen.dk/media/ng3b13va/aftale-om-et-groent-danmark.pdf
+soc_organic,Finland,found,Government Report on the Climate Plan for the Land Use Sector (VNS 7/2022),LULUCF national plan,https://www.eduskunta.fi/pdf/VNS+7/2022
+soc_organic,Ireland,found,"Climate Action Plan 2024, ch.17",National climate plan,https://assets.gov.ie/static/documents/climate-action-plan-2024-8ccbde73-e288-4241-8b26-6b4922389f25.pdf
+soc_organic,Lithuania,found,National Climate Change Management Agenda (via LT NECP),Climate law / strategy,https://commission.europa.eu/document/download/e4569d35-7ab0-4445-8fa6-017357d04546_en
+soc_organic,Latvia,found,"Final updated NECP 2021-2030, LULUCF measures",LULUCF national plan,https://commission.europa.eu/document/download/3e07cbed-22c0-4b69-a8e5-887e0c6aa09e_en
+soc_organic,Netherlands,found,Klimaatakkoord (2019) peat-meadow target; Kamerbrief LNV 2 Feb 2024,National climate agreement / peatland policy,https://zoek.officielebekendmakingen.nl/kst-28625-356.html
+soc_organic,Austria,uncertain,Moorstrategie Oesterreich 2030+,Peatland policy (national strategy),https://www.bmluk.gv.at/dam/jcr:b1db9395-5df4-4863-8d3b-f0d97b83cc67/Moorstrategie%20%C3%96sterreich%202030+.pdf
+soc_organic,Belgium,uncertain,Flemish LULUCF operational objectives (BE NECP),LULUCF national plan (regional),https://commission.europa.eu/document/download/8d994392-46f3-4ae8-a531-1d1b2fbab354_en
+soc_organic,Sweden,uncertain,"Reported 100,000 ha forested-peatland rewetting goal",Peatland / wetland policy,https://pub.norden.org/temanord2025-524/8-sweden.html
+soc_organic,Slovenia,uncertain,NECP indicator re Natura 2000 management programme (PUN 2023-2028),LULUCF / biodiversity indicator,https://commission.europa.eu/document/download/19e1a8df-ca9a-4a37-9e3e-8d360b75d06c_en
+bulk_density,Slovakia,found,"Zakon c. 220/2004 Z.z., par.6 + Priloha 1 (Tab.3)",Agricultural soil protection law (binding),https://static.slov-lex.sk/static/SK/ZZ/2004/220/vyhlasene_znenie.html
+bulk_density,Austria,found,BMLFUW Richtlinien fuer die sachgerechte Bodenrekultivierung (2012),Ministry guideline (non-binding),https://www.bfw.gv.at/wp-content/uploads/Rekultivierungsrichtlinien_-2Auflage_-2012.pdf
+bulk_density,Czechia,uncertain,VUZT certified methodology (2014),Agricultural research methodology (non-legislative),https://mze.gov.cz/public/portal/mze/-q330049---CcjEZFcJ/system-hospodareni-s-cilem-omezit
+bulk_density,Germany,uncertain,"BBodSchV, par.4 + par.6(9) (refers to DIN standards)",Soil protection law (by reference),https://www.gesetze-im-internet.de/bbodschv_2023/BJNR271600021.html
+bulk_density,Romania,uncertain,Ordin MADR 278/2011,Agricultural soil monitoring,https://legislatie.just.ro/Public/DetaliiDocumentAfis/134131
+bulk_density,Slovenia,uncertain,Uredba o obremenjevanju tal z vnasanjem odpadkov (UL RS 34/2008),Waste-into-soil / recultivation law,https://pisrs.si/Pis.web/pregledPredpisa?id=URED4791
+phosphorus,Germany,found,"Duengeverordnung (DueV), par.3(6)",Fertiliser / nutrient-management law,https://www.gesetze-im-internet.de/d_v_2017/__3.html
+phosphorus,Ireland,found,S.I. No. 113/2022,Nitrates-Directive action programme,https://www.irishstatutebook.ie/eli/2022/si/113/made/en/print
+phosphorus,Finland,found,Valtioneuvoston asetus 64/2023,Fertiliser / nutrient-use law,https://www.finlex.fi/fi/laki/alkup/2023/20230064
+phosphorus,Netherlands,found,"Uitvoeringsregeling Meststoffenwet, art.29a-31",Fertiliser / manure law,https://wetten.overheid.nl/BWBR0018989/
+phosphorus,Belgium,found,"Mestdecreet (phosphate classes), Flanders","Nutrient-management (manure) law, regional",https://www.vlm.be/nl/themas/waterkwaliteit/Mestbank/bodemstalen/fosfaat/Paginas/default.aspx
+phosphorus,Slovenia,found,Tehnoloska navodila za integrirano pridelavo poljscin,Agricultural production-scheme regulation (scheme-limited),https://www.gov.si/assets/ministrstva/MKGP/PROJEKTI/SKUPNA-KMETIJSKA-POLITIKA/Tehnoloska-navodila/tn-poljscine.pdf
+phosphorus,Austria,uncertain,Nitrat-Aktionsprogramm-Verordnung; regional fertilisation guideline,Nitrates programme / advisory guideline,https://www.ris.bka.gv.at/GeltendeFassung/Bundesnormen/20012132/NAPV%2c%20Fassung%20vom%2002.10.2026.pdf
+phosphorus,Italy,uncertain,Regional Disciplinari di Produzione Integrata,Agricultural advisory / voluntary scheme,
+phosphorus,Portugal,uncertain,Portaria n.o 79/2022,Nutrient / manure-management law,https://files.dre.pt/1s/2022/02/02400/0003000058.pdf
+erosion,Czechia,found,Vyhlaska c. 240/2021 Sb.,Agricultural-land protection law,https://e-sbirka.gov.cz/sb/2021/240
+erosion,Slovakia,found,"Vyhlaska MP SR c. 508/2004 Z.z., Priloha 6",Agricultural-land protection law,https://static.slov-lex.sk/pdf/SK/ZZ/2004/508/ZZ_2004_508_20130401.pdf
+erosion,Germany,uncertain,"GAP-Konditionalitaeten-Verordnung (GAPKondV), par.16 + Anlage 3",CAP cross-compliance / GAEC 5 implementation,https://www.gesetze-im-internet.de/gapkondv/anlage_3.html
+erosion,Belgium,uncertain,Flemish GLMC 5 conditionality (erosion-sensitivity classes),CAP cross-compliance (regional),https://lv.vlaanderen.be/media/8807/download
+erosion,Romania,uncertain,ICPA guidance: Masuri integrate la nivelul fermei,Agricultural advisory / CGAP (legal status unclear),https://www.icpa.ro/documente/coduri/Masuri_integrate_la_nivelul_fermei_pentru_prevenirea_eroziunii_solului.pdf
+heavy_metals,Austria,found,Oo. Bodengrenzwerte-Verordnung 2006; NOe Klaerschlammverordnung,Land soil-protection law; sewage-sludge regulation (regional),https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=LROO&Gesetzesnummer=20000409
+heavy_metals,Belgium,found,VLAREBO-besluit (Flanders); Decret sols / AGW (Wallonia),Contaminated-site/remediation law (regional),https://codex.vlaanderen.be/portals/codex/documenten/1016744.html
+heavy_metals,Bulgaria,found,Naredba No.3 of 1.8.2008 (DV 71/2008),Soil contamination / soil-quality ordinance,https://www.moew.government.bg/static/media/ups/tiny/NAREDBA__3_ot_1082008_g_za_normite_za_dopustimo_sadarjanie_na_vredni_veshtestva_v_pochvite.pdf
+heavy_metals,Croatia,found,Pravilnik o zastiti poljoprivrednog zemljista od oneciscenja (NN 71/2019),Agricultural-land protection law,https://narodne-novine.nn.hr/clanci/sluzbeni/2019_07_71_1507.html
+heavy_metals,Cyprus,uncertain,"Water Pollution Control (Use of Sludge in Agriculture) Regs, KDP 517/2002",Sewage-sludge regulation,http://www.cylaw.org/KDP/data/2002_1_517.pdf
+heavy_metals,Czechia,found,Vyhlaska 153/2016 Sb.; sludge Vyhlaska 273/2021 Sb.,Agricultural-land protection law; sludge law,https://www.zakonyprolidi.cz/cs/2016-153
+heavy_metals,Denmark,found,BEK nr 1452 af 07/12/2015; BEK nr 554 af 19/05/2010,Contaminated-soil / soil-relocation law,https://www.retsinformation.dk/api/pdf/175829
+heavy_metals,Estonia,found,Keskkonnaministri 28.06.2019 maarus nr 26,Contaminated-soil limit-value regulation,https://www.riigiteataja.ee/aktilisa/1040/7201/9006/Lisa.pdf
+heavy_metals,Finland,found,Valtioneuvoston asetus 214/2007,Contaminated-site/remediation law,https://finlex.fi/fi/lainsaadanto/2007/214
+heavy_metals,France,found,"Arrete du 8 janvier 1998, Annexe I",Sewage-sludge regulation,https://www.legifrance.gouv.fr/loda/id/JORFTEXT000000570287
+heavy_metals,Germany,found,"BBodSchV 2023, Anlage 1/2; AbfKlaerV 2017 par.7",Soil protection law; sludge law refers to it,https://www.gesetze-im-internet.de/bbodschv_2023/BJNR271600021.html
+heavy_metals,Greece,found,KYA YPEN/DDA/41828/630/2023 (FEK 2692/B/21.04.2023),Sewage-sludge regulation,https://www.elinyae.gr/sites/default/files/2023-04/2692%CE%B2_2023.pdf
+heavy_metals,Hungary,found,Joint Decree 6/2009; Gov. Decree 50/2001,Groundwater protection law; sludge regulation,https://net.jogtar.hu/jogszabaly?docid=a0900006.kvv
+heavy_metals,Ireland,found,S.I. No. 148/1998,Sewage-sludge regulation,https://www.irishstatutebook.ie/eli/1998/si/148/made/en/print
+heavy_metals,Italy,found,"D.Lgs. 152/2006, Parte IV, Allegato 5; D.Lgs. 99/1992",Contaminated-site/remediation law; sludge regulation,https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:decreto.legislativo:1992-01-27;99
+heavy_metals,Latvia,found,Cabinet Regulation No. 804/2005,Soil/ground quality-standards regulation,https://likumi.lv/ta/en/en/id/120072
+heavy_metals,Lithuania,found,Hygiene Norm HN 60:2004,Public-health / hygiene law,https://e-seimas.lrs.lt/portal/legalAct/lt/TAD/TAIS.228693
+heavy_metals,Luxembourg,found,Reglement grand-ducal du 23 decembre 2014,Sewage-sludge regulation,https://data.legilux.public.lu/filestore/eli/etat/leg/memorial/2015/a2/fr/pdf/eli-etat-leg-memorial-2015-a2-fr-pdf.pdf
+heavy_metals,Malta,found,S.L. 549.09 Sludge (Use in Agriculture) Regulations,Sewage-sludge regulation,https://legislation.mt/eli/sl/549.9/eng/pdf
+heavy_metals,Netherlands,found,Regeling bodemkwaliteit 2022,Soil-quality / soil-reuse regulation,https://wetten.overheid.nl/BWBR0047808/
+heavy_metals,Poland,found,Rozporzadzenie MS 1.9.2016; sludge Rozporzadzenie 6.2.2015,General environmental-pollution law; sludge regulation,https://dziennikustaw.gov.pl/D2016000139501.pdf
+heavy_metals,Portugal,found,"Decreto-Lei 276/2009, Anexo I",Sewage-sludge regulation,https://dre.pt/application/conteudo/490974
+heavy_metals,Romania,found,Ordinul MAPPM nr. 756/1997,General environmental-pollution law,https://www.mmediu.ro/app/webroot/uploads/files/OM-184-1997-bilant-de-mediu-si-OM-756-1997-evaluarea-poluarii-mediului.pdf
+heavy_metals,Slovakia,found,Zakon 220/2004 Z.z.; Zakon 188/2003 Z.z. (sludge),Agricultural-land protection law; sludge law,https://static.slov-lex.sk/static/SK/ZZ/2004/220/vyhlasene_znenie.html
+heavy_metals,Slovenia,found,Uredba UL RS 68/1996; UL RS 84/2005,Soil-contamination law; agricultural-input control,https://www.uradni-list.si/_pdf/1996/ur/u1996068.pdf
+heavy_metals,Spain,found,Real Decreto 1051/2022; Real Decreto 9/2005,Fertiliser/agricultural-input law; contaminated-site law,https://www.boe.es/buscar/pdf/2022/BOE-A-2022-23052-consolidado.pdf
+heavy_metals,Sweden,found,SNFS 1994:2,Sewage-sludge regulation,https://www.naturvardsverket.se/4ac4f4/globalassets/nfs/1994/snfs1994-02k.pdf
+water_holding,Austria,found,Richtlinien fuer die sachgerechte Bodenrekultivierung (2012); Deponieverordnung 2008,Ministry guideline; landfill ordinance,https://www.bfw.gv.at/wp-content/uploads/Rekultivierungsrichtlinien_-2Auflage_-2012.pdf
+water_holding,Germany,found,"Deponieverordnung (DepV 2009), Anhang 1; BQS 7-1",Landfill ordinance; joint quality standard,https://www.gesetze-im-internet.de/depv_2009/anhang_1.html
+water_holding,Slovakia,uncertain,Zakon c. 220/2004 Z.z. (compaction annex),Agricultural soil protection act,https://static.slov-lex.sk/static/SK/ZZ/2004/220/vyhlasene_znenie.html
+ksat_air_capacity,Austria,found,Richtlinien fuer die sachgerechte Bodenrekultivierung (2012); Steiermark Leitfaden Oberflaechenentwaesserung,Ministry guideline; regional stormwater guideline,https://www.bfw.gv.at/wp-content/uploads/Rekultivierungsrichtlinien_-2Auflage_-2012.pdf
+ksat_air_capacity,Belgium,found,"AGW du 1er decembre 2016, Annexe 4 (Wallonia)",Regional wastewater-infiltration permit conditions,https://wallex.wallonie.be/files/pdfs/12/1699_arrete_conditions_epuration_individuelle.pdf
+ksat_air_capacity,France,found,Arrete du 7 septembre 2009,National wastewater-infiltration order,https://www.legifrance.gouv.fr/loda/id/JORFTEXT000021125109
+ksat_air_capacity,Ireland,found,EPA Code of Practice: Domestic Waste Water Treatment Systems (2021),Statutory code of practice,https://www.epa.ie/publications/compliance--enforcement/waste-water/2021_CodeofPractice_Web.pdf
+ksat_air_capacity,Germany,found,LAGA BQS 7-1; Landkreis Mittelsachsen Merkblatt,Landfill quality standard; county guidance,https://www.gewerbeaufsicht.niedersachsen.de/download/107035/BQS_7-1_Rekultivierungsschichten_in_Deponieoberflaechenabdichtungssystemen_vom_23.09.2021.pdf
+ksat_air_capacity,Sweden,found,Havs- och vattenmyndigheten guidance on small sewage systems,National agency guidance (non-binding),https://www.havochvatten.se/avlopp-och-dricksvatten/sma-avloppsanlaggningar/vagledningar-for-provning-och-tillsyn-av-sma-avlopp/fordjupning/markundersokningar/siktanalys-och-perkolationsprov.html
+ksat_air_capacity,Czechia,uncertain,"MMR: Vsakovani srazkovych vod (metodika, 2019)",Ministry methodology (non-binding),https://mmr.gov.cz/getattachment/e16069fa-3bf8-4a1d-82af-28a17df865c5/Metodika-vsakovani_srpen2019.pdf.aspx
+ksat_air_capacity,Finland,uncertain,SYKE/ELY guidance on dispersed-settlement wastewater,Wastewater guidance,https://www.doria.fi/bitstream/handle/10024/158531/
+ksat_air_capacity,Slovakia,uncertain,"Zakon c. 220/2004 Z.z. (compaction annex, air capacity)",Agricultural soil protection act,https://static.slov-lex.sk/static/SK/ZZ/2004/220/vyhlasene_znenie.html
+soc_stock,Belgium,found,Flemish LULUCF operational objectives (BE NECP),LULUCF national plan (regional),https://commission.europa.eu/document/download/8d994392-46f3-4ae8-a531-1d1b2fbab354_en
+soc_stock,Finland,found,"Climate Plan for the Land Use Sector, par.7.10.1 (VNS 7/2022)",LULUCF national plan / CAP carbon-farming,https://www.eduskunta.fi/pdf/VNS+7/2022
+soc_stock,France,found,Strategie nationale bas-carbone 3 (SNBC 3),Climate strategy,https://www.ecologie.gouv.fr/sites/default/files/documents/SNBC3-ResumeSNBC-Juillet2026.pdf
+soc_stock,Ireland,found,"Climate Action Plan 2024, ch.17",National climate plan,https://assets.gov.ie/static/documents/climate-action-plan-2024-8ccbde73-e288-4241-8b26-6b4922389f25.pdf
+soc_stock,Netherlands,found,Klimaatakkoord (2019) / Nationaal Programma Landbouwbodems; Kamerbrief 2 Feb 2024,National climate agreement / agricultural soil programme,https://zoek.officielebekendmakingen.nl/kst-28625-356.html
+soc_stock,Slovakia,found,"Zakon c. 220/2004 Z.z., par.7 (SOM-balance deficit limit)",Agricultural soil protection law (binding),https://static.slov-lex.sk/static/SK/ZZ/2004/220/vyhlasene_znenie.html
+soc_stock,Spain,uncertain,PNIEC (final updated NECP 2021-2030),LULUCF national plan,https://commission.europa.eu/document/download/211d83b7-b6d9-4bb8-b084-4a3bfb4cad3e_en

@@ -1,5 +1,5 @@
 # shARed mInotAur Database exploratioN Environment : ARIADNE
-# Version: 4.2
+# Version: 4.3
 # Author:
 # Francesco Vitali §
 # Mocali Stefano §
@@ -31,7 +31,8 @@
 ######################################################################################################
 
 
-packages <- c("shiny", "shinydashboard", "tidyverse", "plotly", "rstatix", "maps", "shinythemes")
+packages <- c("shiny", "shinydashboard", "tidyverse", "plotly", "rstatix", "maps", "shinythemes",
+              "ggnewscale")
 
 missing <- setdiff(packages, rownames(installed.packages()))
 if (length(missing) > 0) {
@@ -88,7 +89,15 @@ metadata_MINOTAUR_selected <- metadata_MINOTAUR_selected %>%
     year_precipitation = as.numeric(year_precipitation),
     caco3 = as.numeric(caco3)
   ) %>%
-  mutate(across(where(is.character), ~na_if(., "na")))
+  mutate(across(where(is.character), ~na_if(., "na"))) %>%
+  # 9999 is a missing-data sentinel in the raw source files, confirmed present in
+  # these three numeric columns (checked 2026-10-14 while wiring up the SML
+  # Scenario Testing "use MINOTAUR selection" feature - e.g. a physically
+  # impossible bulk_density of 9999 g/cm3) and left uncaught by the cleanup
+  # above, which only replaces the literal string "na" on character columns.
+  # Not applied blanket-wide to every numeric column - only these three were
+  # actually checked and found to contain it.
+  mutate(across(c(bulk_density, sand, silt), ~na_if(as.numeric(.), 9999)))
 
 
 # Preparing different set of data
@@ -169,32 +178,103 @@ common_vars <- c(
 ######################################################################################################
 ## --- SML scenario testing: variable definitions ---##
 ######################################################################################################
-# Single source of truth for the "Scenario Testing" tab (SML Annex I thresholds).
-# Both the input UI and the radar plot read from this table, so adding a future axis
-# is a matter of adding one row here.
-#
-# direction: "below" = healthy when value < threshold; "above" = healthy when value > threshold
-# fixed_value: for Part A rows only (EU-mandated, identical across every scenario)
-# minotaur_column: NOT used yet - placeholder for a future feature that would classify actual
-#   MINOTAUR samples as healthy/unhealthy per scenario. NA where MINOTAUR has no equivalent
-#   variable (verified against the raw data_source/*.csv headers, not the app's curated subset).
+# Single source of truth for the "Scenario Testing" tab (SML Annex I thresholds), kept in
+# config/sml_scenario_variables.csv rather than hardcoded here so it can be reviewed/updated
+# (e.g. by colleagues, in Excel) without touching app code. Both the input UI and the radar
+# plot read from this table, so adding a future axis is a matter of adding one row to the CSV.
+# See the CSV's own header comment for column meanings.
 
-sml_scenario_variables <- data.frame(
-  id = c("ec", "soc_clay", "bulk_density",
-         "phosphorus", "erosion", "water_holding", "ksat", "air_capacity", "soc_stock"),
-  label = c("Electrical conductivity", "SOC/clay ratio", "Bulk density (subsoil)",
-            "Extractable phosphorus", "Soil erosion rate", "Water holding capacity",
-            "Saturated hydraulic conductivity", "Air capacity", "SOC stock"),
-  unit = c("dS/m", "ratio", "g/cm3",
-           "mg/kg", "t/ha/yr", "%", "cm/day", "%", "tC/ha"),
-  part = c("A", "A", "A",
-           "B", "B", "B", "B", "B", "B"),
-  direction = c("below", "above", "below",
-                "below", "below", "above", "above", "above", "above"),
-  fixed_value = c(4, 1 / 13, 1.80,
-                  NA, NA, NA, NA, NA, NA),
-  minotaur_column = c(NA, NA, "bulk_density",
-                       "phosphorus_available", NA, NA, NA, NA, NA),
+sml_scenario_variables <- read.csv(
+  "config/sml_scenario_variables.csv",
+  comment.char = "#", na.strings = c("", "NA"), stringsAsFactors = FALSE
+)
+
+# National-legislation precedent for the 10 Annex I Part A/B rows shown in the SML "General
+# Information" table (ui.R) - a 2026-09/10 AI-assisted first-pass scan, UNVERIFIED, kept in a CSV
+# for the same reason as above. Deliberately has no numeric thresholds (see the CSV's own header
+# comment): the legislative landscape is too heterogeneous across states to present as comparable
+# figures yet. `variable_id` values here are independent of sml_scenario_variables$id - this table
+# has one row per Annex I Part A/B descriptor (10, including "soc_organic", which has no
+# corresponding Scenario Testing variable) rather than per scenario-testing axis (9).
+sml_national_precedent <- read.csv(
+  "config/sml_national_precedent.csv",
+  comment.char = "#", na.strings = c("", "NA"), stringsAsFactors = FALSE
+)
+
+# Clickable "<found>/27" cell for the Annex I table (ui.R). Denominator is always 27 (EU member
+# states), not the row count for this variable - a variable with 3 "found" + 2 "uncertain" rows
+# still has 22 states nobody checked, not 5.
+sml_precedent_link <- function(var_id) {
+  found_n <- sum(sml_national_precedent$variable_id == var_id & sml_national_precedent$status == "found")
+  tags$a(href = "#", `data-toggle` = "modal", `data-target` = paste0("#precedent-modal-", var_id),
+         style = "font-weight:bold; text-decoration:underline; cursor:pointer;",
+         sprintf("%d/27", found_n))
+}
+
+# Bootstrap modal (pure client-side, no server round-trip) listing every state found/uncertain
+# for one Annex I variable, with legislation name, legal category and source link - deliberately
+# no numeric thresholds, see config/sml_national_precedent.csv's own header comment.
+sml_precedent_modal <- function(var_id, title) {
+  rows <- sml_national_precedent[sml_national_precedent$variable_id == var_id, ]
+  rows <- rows[order(rows$status != "found", rows$country), ]
+  n_found <- sum(rows$status == "found")
+  n_uncertain <- sum(rows$status == "uncertain")
+
+  body_rows <- if (nrow(rows) == 0) {
+    list(tags$tr(tags$td(colspan = 4, em("No candidate legislation identified in this scan."))))
+  } else {
+    lapply(seq_len(nrow(rows)), function(i) {
+      r <- rows[i, ]
+      status_style <- if (r$status == "found") "color:#2e7d32; font-weight:bold;" else "color:#b8860b; font-weight:bold;"
+      link_cell <- if (!is.na(r$source_link) && nzchar(r$source_link)) {
+        tags$a(href = r$source_link, target = "_blank", rel = "noopener", "source")
+      } else {
+        tags$span(style = "color:#999;", "no link retrieved")
+      }
+      tags$tr(
+        tags$td(r$country),
+        tags$td(tags$span(style = status_style, if (r$status == "found") "Found" else "Uncertain")),
+        tags$td(r$instrument, tags$br(), tags$span(style = "color:#777; font-size:0.85em;", r$legal_category)),
+        tags$td(link_cell)
+      )
+    })
+  }
+
+  tags$div(class = "modal fade", id = paste0("precedent-modal-", var_id), tabindex = "-1", role = "dialog",
+    tags$div(class = "modal-dialog modal-lg", role = "document",
+      tags$div(class = "modal-content",
+        tags$div(class = "modal-header",
+          tags$button(type = "button", class = "close", `data-dismiss` = "modal", `aria-label` = "Close",
+                      tags$span(`aria-hidden` = "true", HTML("&times;"))),
+          tags$h4(class = "modal-title", title)
+        ),
+        tags$div(class = "modal-body",
+          p(em(sprintf(
+            "%d of 27 EU Member States found with existing legislation touching this variable (any legal domain, not necessarily framed as soil law) - %d more flagged as uncertain, the rest not confirmed either way. Unverified first-pass scan, 2026-09/10. No numeric thresholds recorded - see the note below the main table.",
+            n_found, n_uncertain
+          ))),
+          tags$div(style = "overflow-x:auto;",
+            tags$table(class = "table table-condensed table-striped",
+              tags$thead(tags$tr(tags$th("Country"), tags$th("Status"), tags$th("Legislation / legal category"), tags$th("Source"))),
+              tags$tbody(body_rows)
+            )
+          )
+        )
+      )
+    )
+  )
+}
+
+# Index of the 10 Annex I Part A/B rows this precedent research covers, used by ui.R to generate
+# one modal per variable (see sml_precedent_modal() above) without repeating the title 10 times.
+sml_annex_precedent_index <- data.frame(
+  id = c("ec", "soc_clay", "soc_organic", "bulk_density", "phosphorus",
+         "erosion", "heavy_metals", "water_holding", "ksat_air_capacity", "soc_stock"),
+  title = c("Electrical conductivity (EC)", "SOC concentration - Mineral soils",
+            "SOC concentration - Organic soils", "Bulk density (subsoil)",
+            "Extractable phosphorus", "Soil erosion rate",
+            "Heavy metals and selected organic contaminants", "Soil water holding capacity",
+            "Saturated hydraulic conductivity and air capacity", "SOC stocks"),
   stringsAsFactors = FALSE
 )
 
@@ -202,6 +282,18 @@ sml_scenario_variables <- data.frame(
 # for the macrofauna ecological-group plots) - 8 colors, so scenarios are capped at 8.
 okabe_ito_palette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442",
                         "#0072B2", "#D55E00", "#CC79A7", "#000000")
+
+# ColorBrewer "Set2" (RColorBrewer::brewer.pal(8, "Set2"); brewer.pal.info["Set2",
+# "colorblind"] is TRUE) - used for the Scenario Testing "Colour/group samples by"
+# metadata categories, kept deliberately separate from okabe_ito_palette (used for
+# scenario identity) so the two legends never look alike. Re-ordered from
+# ColorBrewer's own order so the first ~5 entries (the realistic case: few
+# category levels shown alongside a handful of scenarios) stay furthest in hue
+# from Okabe-Ito's first ~5 (orange/sky-blue/teal/yellow/blue) - the teal, orange
+# and yellow entries that would otherwise clash are pushed to the end instead of
+# dropped, since Set2 is only certified colorblind-safe as the full 8-color set.
+group_palette <- c("#E78AC3", "#E5C494", "#A6D854", "#8DA0CB", "#B3B3B3",
+                    "#66C2A5", "#FC8D62", "#FFD92F")
 
 # ggplot2 has no built-in radar/spider coordinate system; this is the standard
 # recipe (coord_polar with straight, not curved, grid lines between axes).
@@ -212,3 +304,4 @@ coord_radar <- function(theta = "x", start = 0, direction = 1) {
           start = start, direction = sign(direction),
           is_linear = function(coord) TRUE)
 }
+

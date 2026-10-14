@@ -1,5 +1,5 @@
 # shARed mInotAur Database exploratioN Environment : ARIADNE
-# Version: 4.2
+# Version: 4.3
 # Author:
 # Francesco Vitali §
 # Mocali Stefano §
@@ -1723,12 +1723,60 @@ server <- function(input, output) {
 
   # Uploaded samples are read straight from the temp path Shiny gives the file -
   # never written anywhere else, never persisted beyond this session.
+  # Which data source Scenario Testing is currently reading from - "upload" (a
+  # user CSV), "minotaur" (the live MINOTAUR selection from Overview's
+  # sites_selected_reactive()), or "none" (cleared, so only the scenarios/
+  # thresholds remain). A fresh upload or a MINOTAUR-selection click always
+  # switches away from "none", so there's no separate "go back" control needed
+  # beyond re-doing whichever of those two the user wants.
+  rv_sml_source <- reactiveValues(mode = "upload")
+  observeEvent(input$use_minotaur_selection, { rv_sml_source$mode <- "minotaur" })
+  observeEvent(input$sample_upload, { rv_sml_source$mode <- "upload" })
+  observeEvent(input$clear_sml_samples, { rv_sml_source$mode <- "none" })
+
+  # The current MINOTAUR/Overview selection, reshaped into the same shape a
+  # CSV upload would have: sample_id + whichever sml_scenario_variables columns
+  # MINOTAUR actually has real data for, plus a couple of ready-made categorical
+  # columns (country, land_use) for "Colour/group samples by". Real coverage is
+  # sparse - most sampling points will come back "undetermined" for bulk_density/
+  # phosphorus/soc_clay, that's the data, not a bug.
+  minotaur_samples_for_sml <- reactive({
+    sites <- sites_selected_reactive()
+    if (is.null(sites) || nrow(sites) == 0) return(NULL)
+    out <- data.frame(sample_id = sites$id_sampling_point, stringsAsFactors = FALSE)
+    if ("bulk_density" %in% colnames(sites)) {
+      out$bulk_density <- suppressWarnings(as.numeric(sites$bulk_density))
+    }
+    if ("phosphorus_available" %in% colnames(sites)) {
+      out$phosphorus <- suppressWarnings(as.numeric(sites$phosphorus_available))
+    }
+    if (all(c("soc_mean", "sand", "silt") %in% colnames(sites))) {
+      soc <- suppressWarnings(as.numeric(sites$soc_mean))
+      clay <- 100 - suppressWarnings(as.numeric(sites$sand)) - suppressWarnings(as.numeric(sites$silt))
+      # a handful of rows have sand+silt > 100 (bad source data) - 0-100 guard
+      # keeps that from producing a nonsensical or negative ratio downstream.
+      clay[!is.na(clay) & (clay <= 0 | clay > 100)] <- NA
+      out$soc_clay <- soc / clay
+    }
+    if ("country_code" %in% colnames(sites)) out$country <- sites$country_code
+    if ("study_landuse" %in% colnames(sites)) out$land_use <- sites$study_landuse
+    out
+  })
+
   uploaded_samples <- reactive({
     # NOT req(): req()'s silent-stop would abort the ENTIRE render of any output
     # that calls this reactive (e.g. scenario_radar_plot), not just the part that
     # needs the upload - meaning the scenario polygons would vanish too whenever
     # no file had been uploaded yet. Returning NULL lets each caller decide how
     # to handle "nothing uploaded" (they already all check for it).
+    # Despite the name, this is the single dispatch point for BOTH data sources -
+    # every other reactive/output in this file reads this one, never the file
+    # input or sites_selected_reactive() directly, so the upload-vs-MINOTAUR
+    # switch only has to happen here.
+    if (identical(rv_sml_source$mode, "none")) return(NULL)
+    if (identical(rv_sml_source$mode, "minotaur")) {
+      return(minotaur_samples_for_sml())
+    }
     if (is.null(input$sample_upload)) return(NULL)
     tryCatch(
       utils::read.csv(input$sample_upload$datapath, stringsAsFactors = FALSE),
@@ -1739,6 +1787,58 @@ server <- function(input, output) {
   n_uploaded <- reactive({
     df <- uploaded_samples()
     if (is.null(df)) 0 else nrow(df)
+  })
+
+  # Any upload column that isn't sample_id or a known SML variable is user-supplied
+  # metadata (land use, treatment, site, ...) - not fixed in name or count, so this
+  # is computed from whatever the file actually has, not a config list.
+  uploaded_metadata_columns <- reactive({
+    df <- uploaded_samples()
+    if (is.null(df)) return(character(0))
+    setdiff(colnames(df), c("sample_id", sml_scenario_variables$id))
+  })
+
+  # Only categorical metadata columns are offered for colouring/grouping for now
+  # (see scenario_testing_roadmap note) - a column is categorical here if it isn't
+  # cleanly numeric, mirroring the numeric/categorical split already used
+  # throughout the MINOTAUR Analysis tab (is.character() on the chosen column).
+  uploaded_categorical_metadata_columns <- reactive({
+    cols <- uploaded_metadata_columns()
+    if (length(cols) == 0) return(character(0))
+    df <- uploaded_samples()
+    is_cat <- vapply(cols, function(col) {
+      raw <- as.character(df[[col]])
+      raw <- raw[!is.na(raw) & nzchar(raw)]
+      if (length(raw) == 0) return(FALSE)
+      any(is.na(suppressWarnings(as.numeric(raw))))
+    }, logical(1))
+    cols[is_cat]
+  })
+
+  output$scenario_groupby_selector <- renderUI({
+    cols <- uploaded_categorical_metadata_columns()
+    if (length(cols) == 0) return(NULL)
+    # "__none__", not "" - with selectize (the selectInput default), an option
+    # whose value is the empty string doesn't reliably show back up as a pickable
+    # item once another option has been chosen, which made "None" look like it
+    # had vanished after picking a real column. selectize = FALSE too, so this
+    # is a plain, predictable <select> regardless.
+    choices <- c("None" = "__none__", setNames(cols, cols))
+    current <- isolate(input$scenario_groupby)
+    selected <- if (!is.null(current) && current %in% choices) current else "__none__"
+    selectInput("scenario_groupby", "Colour/group samples by", choices = choices,
+                 selected = selected, selectize = FALSE)
+  })
+
+  # The real group-by column, or NULL if "None" is selected - or if the
+  # previously-selected column isn't in the current upload (e.g. after
+  # switching files). Every reader below uses this instead of the raw input,
+  # so "what counts as no grouping" is decided in exactly one place.
+  active_groupby_column <- reactive({
+    groupby <- input$scenario_groupby
+    df <- uploaded_samples()
+    if (is.null(groupby) || is.null(df) || !(groupby %in% colnames(df))) return(NULL)
+    groupby
   })
 
   output$scenario_plot_type_selector <- renderUI({
@@ -1760,14 +1860,35 @@ server <- function(input, output) {
 
   # Long-format sample values, one row per (sample, variable) - feeds the
   # histogram/violin plots. Not used by the radar, which only needs positions.
+  # `group` is the chosen metadata column's value for that sample, repeated once
+  # per variable block (same row order as df) - constant "All samples" when no
+  # grouping is selected, so downstream plotting code never needs to branch on
+  # whether grouping is active, just on how many levels `group` actually has.
+  no_samples_message <- function() {
+    if (identical(rv_sml_source$mode, "none")) {
+      "No sample data loaded - upload a CSV or use the current MINOTAUR selection to see this view."
+    } else if (identical(rv_sml_source$mode, "minotaur")) {
+      "No MINOTAUR samples match the current Overview filters - adjust them, or upload a CSV instead."
+    } else {
+      "Upload a CSV to see this view."
+    }
+  }
+
   sample_values_long <- reactive({
     df <- uploaded_samples()
-    validate(need(!is.null(df) && nrow(df) > 0, "Upload a CSV to see this view."))
+    validate(need(!is.null(df) && nrow(df) > 0, no_samples_message()))
     all_vars <- sml_scenario_variables
+    groupby <- active_groupby_column()
+    group_vals <- if (!is.null(groupby)) {
+      g <- as.character(df[[groupby]])
+      ifelse(is.na(g) | !nzchar(g), "(blank)", g)
+    } else {
+      rep("All samples", nrow(df))
+    }
     rows <- lapply(seq_len(nrow(all_vars)), function(i) {
       v <- all_vars[i, ]
       vals <- if (v$id %in% colnames(df)) suppressWarnings(as.numeric(df[[v$id]])) else rep(NA_real_, nrow(df))
-      data.frame(variable = v$label, value = vals, stringsAsFactors = FALSE)
+      data.frame(variable = v$label, value = vals, group = group_vals, stringsAsFactors = FALSE)
     })
     out <- do.call(rbind, rows)
     out$variable <- factor(out$variable, levels = all_vars$label)
@@ -1803,38 +1924,73 @@ server <- function(input, output) {
   # detailed classification tables (previously duplicated between them).
   sample_classification <- reactive({
     df <- uploaded_samples()
-    validate(need(!is.null(df) && nrow(df) > 0, "Upload a CSV to see classification results."))
+    validate(need(!is.null(df) && nrow(df) > 0, no_samples_message()))
     scenarios <- rv_scenarios$scenarios
     validate(need(length(scenarios) > 0, "Add at least one scenario to classify samples against."))
 
     sample_ids <- if ("sample_id" %in% colnames(df)) as.character(df$sample_id) else paste("Row", seq_len(nrow(df)))
     all_vars <- sml_scenario_variables
 
+    # Same metadata-group column used by the plots (active_groupby_column()),
+    # carried through here too so the classification table can offer a "per
+    # category" view without a second, separate column-choice control.
+    groupby <- active_groupby_column()
+    group_vals <- if (!is.null(groupby)) {
+      g <- as.character(df[[groupby]])
+      ifelse(is.na(g) | !nzchar(g), "(blank)", g)
+    } else {
+      rep("All samples", nrow(df))
+    }
+
+    # Vectorised per (scenario, variable) - NOT per (scenario, sample, variable).
+    # The per-row version here used to do one rbind() per sample per variable per
+    # scenario - fine for a handful of uploaded samples, but a MINOTAUR selection
+    # can be thousands of rows: at ~15,000 samples that was measured at over a
+    # minute for a single scenario (the actual cause of the app appearing to
+    # hang), against ~0.1s for this version doing the same comparison as one
+    # vectorised op over the whole column instead of a value at a time.
     rows <- lapply(scenarios, function(s) {
-      do.call(rbind, lapply(seq_len(nrow(df)), function(r) {
-        do.call(rbind, lapply(seq_len(nrow(all_vars)), function(i) {
-          v <- all_vars[i, ]
-          val <- if (v$id %in% colnames(df)) suppressWarnings(as.numeric(df[[v$id]][r])) else NA_real_
-          thr <- if (v$part == "A") {
-            v$fixed_value
-          } else {
-            tv <- input[[paste0("thr_", s$id, "_", v$id)]]
-            if (is.null(tv)) NA_real_ else as.numeric(tv)
-          }
-          status <- if (is.na(val) || is.na(thr)) {
-            "undetermined"
-          } else if (v$direction == "below") {
-            if (val <= thr) "healthy" else "unhealthy"
-          } else {
-            if (val >= thr) "healthy" else "unhealthy"
-          }
-          data.frame(scenario_id = s$id, scenario_name = current_scenario_name(s), scenario_color = s$color,
-                     sample_id = sample_ids[r], variable_id = v$id, variable_label = v$label,
-                     status = status, stringsAsFactors = FALSE)
-        }))
+      do.call(rbind, lapply(seq_len(nrow(all_vars)), function(i) {
+        v <- all_vars[i, ]
+        val <- if (v$id %in% colnames(df)) suppressWarnings(as.numeric(df[[v$id]])) else rep(NA_real_, nrow(df))
+        thr <- if (v$part == "A") {
+          v$fixed_value
+        } else {
+          tv <- input[[paste0("thr_", s$id, "_", v$id)]]
+          if (is.null(tv)) NA_real_ else as.numeric(tv)
+        }
+        status <- if (is.na(thr)) {
+          rep("undetermined", nrow(df))
+        } else if (v$direction == "below") {
+          ifelse(is.na(val), "undetermined", ifelse(val <= thr, "healthy", "unhealthy"))
+        } else {
+          ifelse(is.na(val), "undetermined", ifelse(val >= thr, "healthy", "unhealthy"))
+        }
+        data.frame(scenario_id = s$id, scenario_name = current_scenario_name(s), scenario_color = s$color,
+                   sample_id = sample_ids, group = group_vals, variable_id = v$id, variable_label = v$label,
+                   status = status, stringsAsFactors = FALSE)
       }))
     })
     do.call(rbind, rows)
+  })
+
+  output$sml_data_source_status <- renderUI({
+    if (identical(rv_sml_source$mode, "none")) {
+      return(p(style = "color:#888;", icon("broom"),
+               " No sample data loaded - showing scenarios/thresholds only."))
+    }
+    df <- uploaded_samples()
+    n <- if (is.null(df)) 0 else nrow(df)
+    if (identical(rv_sml_source$mode, "minotaur")) {
+      p(style = "color:#1565c0; font-weight:bold;",
+        icon("database"),
+        sprintf(" Using %d MINOTAUR sampling point(s) from the current Overview selection.", n))
+    } else if (!is.null(input$sample_upload)) {
+      p(style = "color:#555;", icon("file-csv"),
+        sprintf(" Using %d sample(s) from your uploaded CSV.", n))
+    } else {
+      NULL
+    }
   })
 
   output$sample_upload_warnings <- renderUI({
@@ -1852,11 +2008,56 @@ server <- function(input, output) {
         sprintf("Missing columns (treated as not available for every sample): %s",
                 paste(missing_cols, collapse = ", ")))))
     }
-    unknown_cols <- setdiff(colnames(df), c("sample_id", sml_scenario_variables$id))
-    if (length(unknown_cols) > 0) {
-      msgs <- c(msgs, list(p(style = "color:#888;",
-        sprintf("Unrecognized columns ignored: %s", paste(unknown_cols, collapse = ", ")))))
+    metadata_cols <- uploaded_metadata_columns()
+    if (length(metadata_cols) > 0) {
+      categorical_cols <- uploaded_categorical_metadata_columns()
+      numeric_only <- setdiff(metadata_cols, categorical_cols)
+      msgs <- c(msgs, list(p(style = "color:#2e7d32;",
+        sprintf("Extra column(s) found, treated as metadata (not an SML variable): %s.%s",
+                paste(metadata_cols, collapse = ", "),
+                if (length(categorical_cols) > 0) {
+                  sprintf(" Available to colour/group plots by: %s.", paste(categorical_cols, collapse = ", "))
+                } else {
+                  ""
+                }))))
+      if (length(numeric_only) > 0) {
+        msgs <- c(msgs, list(p(style = "color:#888;",
+          sprintf("%s looks numeric - grouping by a numeric column isn't supported yet, so it's kept but not offered as a group-by option.",
+                  paste(numeric_only, collapse = ", ")))))
+      }
     }
+
+    # Value-level checks: type (non-numeric garbage) and plausibility (likely unit
+    # mistakes). Both are informational only - neither blocks the upload nor changes
+    # how values already flow into sample_values_long()/sample_classification(),
+    # which already treat a non-numeric value as NA/"undetermined".
+    present_vars <- sml_scenario_variables[sml_scenario_variables$id %in% colnames(df), ]
+    for (i in seq_len(nrow(present_vars))) {
+      v <- present_vars[i, ]
+      raw <- as.character(df[[v$id]])
+      num <- suppressWarnings(as.numeric(raw))
+
+      bad_rows <- which(!is.na(raw) & trimws(raw) != "" & is.na(num))
+      if (length(bad_rows) > 0) {
+        shown <- head(bad_rows, 5)
+        more <- if (length(bad_rows) > 5) sprintf(" (+%d more)", length(bad_rows) - 5) else ""
+        msgs <- c(msgs, list(p(style = "color:#c62828;",
+          sprintf("Non-numeric value(s) in column \"%s\", row(s) %s%s - treated as missing.",
+                  v$id, paste(shown, collapse = ", "), more))))
+      }
+
+      if (!is.na(v$plausible_min) && !is.na(v$plausible_max)) {
+        out_rows <- which(!is.na(num) & (num < v$plausible_min | num > v$plausible_max))
+        if (length(out_rows) > 0) {
+          shown <- head(out_rows, 5)
+          more <- if (length(out_rows) > 5) sprintf(" (+%d more)", length(out_rows) - 5) else ""
+          msgs <- c(msgs, list(p(style = "color:#e65100;",
+            sprintf("Column \"%s\", row(s) %s%s: value(s) far outside the expected range (%s-%s %s) - check for a possible unit mistake.",
+                    v$id, paste(shown, collapse = ", "), more, v$plausible_min, v$plausible_max, v$unit))))
+        }
+      }
+    }
+
     if (length(msgs) == 0) {
       msgs <- list(p(style = "color:#2e7d32;", sprintf("%d sample(s) loaded.", nrow(df))))
     }
@@ -1916,28 +2117,62 @@ server <- function(input, output) {
       color_lookup <- unique(thr[, c("scenario", "color")])
       color_vec <- setNames(color_lookup$color, color_lookup$scenario)
 
+      # "All samples" (the only level when no metadata grouping is selected) keeps
+      # the plot's original single fixed colour; a real grouping gets one colour
+      # per level from group_palette (deliberately not okabe_ito_palette - that
+      # one's reserved for scenario identity, see global.R), recycled if there
+      # are more levels than the palette.
+      group_levels <- sort(unique(vals$group))
+      grouped <- length(group_levels) > 1 || !identical(group_levels, "All samples")
+      group_colors <- if (!grouped) {
+        c("All samples" = "#2C7FB8")
+      } else {
+        setNames(rep_len(group_palette, length(group_levels)), group_levels)
+      }
+      legend_title <- active_groupby_column()
+      # The scenario threshold lines are dashed on the plot (to read as a
+      # reference line, not data) but a dashed sliver is hard to make out inside
+      # a small legend key - override.aes keeps the dash on the plot and shows a
+      # plain solid line in the legend only.
+      scenario_guide <- guide_legend(override.aes = list(linetype = 1))
+
       if (plot_type == "histogram") {
-        ggplot(vals, aes(x = value)) +
-          geom_histogram(bins = 15, fill = "#2C7FB8", alpha = 0.7, color = "white", na.rm = TRUE) +
+        p <- if (!grouped) {
+          ggplot(vals, aes(x = value)) +
+            geom_histogram(bins = 15, fill = "#2C7FB8", alpha = 0.7, color = "gray20", na.rm = TRUE)
+        } else {
+          ggplot(vals, aes(x = value, fill = group)) +
+            geom_histogram(bins = 15, alpha = 0.6, color = "gray20", position = "identity", na.rm = TRUE) +
+            scale_fill_manual(values = group_colors)
+        }
+        p +
           geom_vline(data = thr, aes(xintercept = thr, color = scenario),
                      linetype = "dashed", linewidth = 0.8, na.rm = TRUE) +
-          scale_color_manual(values = color_vec) +
+          scale_color_manual(values = color_vec, guide = scenario_guide) +
           facet_wrap(~variable, scales = "free_x", ncol = 3) +
           theme_bw() +
-          theme(strip.text = element_text(size = 9), legend.title = element_blank()) +
-          labs(x = NULL, y = "count")
+          theme(strip.text = element_text(size = 9)) +
+          labs(x = NULL, y = "count", color = NULL, fill = legend_title)
       } else {
-        ggplot(vals, aes(x = 1, y = value)) +
-          geom_violin(fill = "#2C7FB8", alpha = 0.5, color = "#2C7FB8", trim = FALSE, na.rm = TRUE) +
+        p <- if (!grouped) {
+          ggplot(vals, aes(x = 1, y = value)) +
+            geom_violin(fill = "#2C7FB8", alpha = 0.5, color = "gray20", trim = FALSE, na.rm = TRUE)
+        } else {
+          ggplot(vals, aes(x = group, y = value, fill = group)) +
+            geom_violin(alpha = 0.5, color = "gray20", trim = FALSE, na.rm = TRUE) +
+            scale_fill_manual(values = group_colors)
+        }
+        p +
           geom_jitter(width = 0.15, height = 0, alpha = 0.3, size = 0.8, na.rm = TRUE) +
           geom_hline(data = thr, aes(yintercept = thr, color = scenario),
                      linetype = "dashed", linewidth = 0.8, na.rm = TRUE) +
-          scale_color_manual(values = color_vec) +
+          scale_color_manual(values = color_vec, guide = scenario_guide) +
           facet_wrap(~variable, scales = "free_y", ncol = 3) +
           theme_bw() +
-          theme(strip.text = element_text(size = 9), axis.text.x = element_blank(),
-                axis.ticks.x = element_blank(), legend.title = element_blank()) +
-          labs(x = NULL, y = NULL)
+          theme(strip.text = element_text(size = 9),
+                axis.text.x = if (grouped) element_text(size = 7) else element_blank(),
+                axis.ticks.x = if (grouped) element_line() else element_blank()) +
+          labs(x = NULL, y = NULL, color = NULL, fill = legend_title)
       }
 
     } else {
@@ -2019,7 +2254,11 @@ server <- function(input, output) {
     if (is.null(zoom_max) || zoom_max <= 0) zoom_max <- 1
 
     p <- ggplot(plot_df, aes(x = variable, y = position, group = scenario, color = scenario, fill = scenario)) +
-      geom_polygon(alpha = 0.18, linewidth = 0) +
+      # show.legend = FALSE here: this low-alpha fill layer would otherwise wash
+      # out the combined colour+fill legend key, making the scenario's line look
+      # faint/broken instead of a clean solid line - geom_path + geom_point below
+      # are enough to give each scenario a legible legend entry on their own.
+      geom_polygon(alpha = 0.18, linewidth = 0, show.legend = FALSE) +
       geom_path(linewidth = 1) +
       geom_point(size = 2) +
       scale_color_manual(values = color_map) +
@@ -2044,23 +2283,49 @@ server <- function(input, output) {
       } else {
         paste("Row", seq_len(nrow(samples_df)))
       }
-      point_rows <- do.call(rbind, lapply(seq_len(nrow(samples_df)), function(r) {
-        do.call(rbind, lapply(seq_len(n_vars), function(i) {
-          v <- all_vars[i, ]
-          if (!(v$id %in% colnames(samples_df))) return(NULL)
-          raw_val <- suppressWarnings(as.numeric(samples_df[[v$id]][r]))
-          if (is.na(raw_val)) return(NULL)
-          rng <- axis_range[[v$id]]
-          if (raw_val < rng[1] || raw_val > rng[2]) return(NULL)
-          data.frame(sample = sample_ids[r], variable = v$label,
-                     position = normalize(raw_val, v$id), stringsAsFactors = FALSE)
-        }))
+      groupby <- active_groupby_column()
+      sample_groups <- if (!is.null(groupby)) {
+        g <- as.character(samples_df[[groupby]])
+        ifelse(is.na(g) | !nzchar(g), "(blank)", g)
+      } else {
+        rep("All samples", nrow(samples_df))
+      }
+      # Vectorised per variable (masking which samples to keep), not per sample
+      # per variable - same fix as sample_classification(), same reason (a
+      # MINOTAUR selection can be thousands of rows).
+      point_rows <- do.call(rbind, lapply(seq_len(n_vars), function(i) {
+        v <- all_vars[i, ]
+        if (!(v$id %in% colnames(samples_df))) return(NULL)
+        raw_val <- suppressWarnings(as.numeric(samples_df[[v$id]]))
+        rng <- axis_range[[v$id]]
+        keep <- !is.na(raw_val) & raw_val >= rng[1] & raw_val <= rng[2]
+        if (!any(keep)) return(NULL)
+        data.frame(sample = sample_ids[keep], variable = v$label, group = sample_groups[keep],
+                   position = normalize(raw_val[keep], v$id), stringsAsFactors = FALSE)
       }))
       if (!is.null(point_rows) && nrow(point_rows) > 0) {
         point_rows$variable <- factor(point_rows$variable, levels = all_vars$label)
-        p <- p + geom_point(data = point_rows, aes(x = variable, y = position, group = sample),
-                             inherit.aes = FALSE, shape = 1, size = 2.2,
-                             color = "black", stroke = 0.9)
+        group_levels <- sort(unique(point_rows$group))
+        grouped <- length(group_levels) > 1 || !identical(group_levels, "All samples")
+        point_colors <- if (!grouped) {
+          c("All samples" = "grey60")
+        } else {
+          setNames(rep_len(group_palette, length(group_levels)), group_levels)
+        }
+        legend_title <- groupby
+        # Filled points (shape 21): a solid fill reads much better than a hollow
+        # outline once there's a busy overlay of polygons/paths behind it, which
+        # is exactly the "hard to see in overlay" complaint this was changed for.
+        # Border is a fixed gray20 (same as the histogram bars), not mapped, so it
+        # needs no scale of its own; fill IS mapped to group, and that collides
+        # with the scenario polygons' own fill scale above without a second,
+        # independent one (ggnewscale) - the two then coexist as separate legends
+        # instead of one silently overwriting the other.
+        p <- p + ggnewscale::new_scale_fill() +
+          geom_point(data = point_rows, aes(x = variable, y = position, group = sample, fill = group),
+                     inherit.aes = FALSE, shape = 21, size = 2.6, color = "gray20", stroke = 0.6) +
+          scale_fill_manual(values = point_colors, guide = if (grouped) "legend" else "none") +
+          labs(fill = legend_title)
       }
     }
 
@@ -2070,6 +2335,19 @@ server <- function(input, output) {
 
     p
     }
+  })
+
+  # Shown only inside the Detailed view, and only offers "Per category" once a
+  # group-by column is actually selected above (in the plot section) - reuses
+  # that same choice rather than asking the user to pick a column twice.
+  output$sample_table_detail_mode_selector <- renderUI({
+    if (!identical(input$sample_table_view_mode, "detailed")) return(NULL)
+    if (is.null(active_groupby_column())) return(NULL)
+    current <- isolate(input$sample_table_detail_mode)
+    choices <- c("Per sample" = "sample", "Per category" = "category")
+    selected <- if (!is.null(current) && current %in% choices) current else "sample"
+    radioButtons("sample_table_detail_mode", label = NULL, choices = choices,
+                 selected = selected, inline = TRUE)
   })
 
   output$sample_classification_table <- renderUI({
@@ -2087,8 +2365,45 @@ server <- function(input, output) {
       }
     }
 
+    # Per-variable cells: plain "Healthy/Total" (Total = healthy + unhealthy, same
+    # denominator convention as the Aggregated view's % Healthy), in normal black -
+    # a whole table of green numbers reads as "all healthy" at a glance, which
+    # isn't the point here. Undetermined is still noted, never silently dropped,
+    # since the single-sample view always shows a "–" for it too.
+    fmt_count_cell <- function(sub) {
+      healthy <- sum(sub$status == "healthy")
+      unhealthy <- sum(sub$status == "unhealthy")
+      undetermined <- sum(sub$status == "undetermined")
+      total <- healthy + unhealthy
+      main <- if (total > 0) sprintf("%d/%d", healthy, total) else "–"
+      tagList(
+        tags$span(main),
+        if (undetermined > 0) tags$span(style = "color:#9e9e9e; font-size:0.85em;", sprintf(" (%d n/d)", undetermined)) else NULL
+      )
+    }
+
+    # Row-end summary cell only: healthy/unhealthy/total, each coloured (green/
+    # red/black) - this one column is meant to be read as a quick health
+    # snapshot for the category, unlike the plain per-variable cells above.
+    fmt_count_cell_total <- function(sub) {
+      healthy <- sum(sub$status == "healthy")
+      unhealthy <- sum(sub$status == "unhealthy")
+      undetermined <- sum(sub$status == "undetermined")
+      total <- healthy + unhealthy
+      tagList(
+        tags$span(style = "color:#2e7d32; font-weight:bold;", healthy),
+        " / ",
+        tags$span(style = "color:#c62828; font-weight:bold;", unhealthy),
+        " / ",
+        tags$span(style = "font-weight:bold;", total),
+        if (undetermined > 0) tags$span(style = "color:#9e9e9e; font-size:0.85em;", sprintf(" (%d n/d)", undetermined)) else NULL
+      )
+    }
+
     view_mode <- input$sample_table_view_mode
     if (is.null(view_mode)) view_mode <- "aggregated"
+    detail_mode <- input$sample_table_detail_mode
+    if (is.null(detail_mode)) detail_mode <- "sample"
 
     if (view_mode == "aggregated") {
       blocks <- lapply(scenario_ids, function(sid) {
@@ -2134,6 +2449,33 @@ server <- function(input, output) {
         )
 
         tagList(header_row, var_header, var_rows, total_row)
+      })
+
+      tags$table(class = "table table-bordered table-striped", tags$tbody(blocks))
+
+    } else if (detail_mode == "category") {
+      validate(need(!is.null(active_groupby_column()),
+                    "Pick a \"Colour/group samples by\" column above (in the plot section) to see samples grouped by category here."))
+      group_levels <- sort(unique(cls$group))
+      blocks <- lapply(scenario_ids, function(sid) {
+        sub <- cls[cls$scenario_id == sid, ]
+        header_row <- tags$tr(tags$td(colspan = nrow(all_vars) + 2,
+          style = sprintf("background-color:%s; color:#ffffff; font-weight:bold; padding:8px;", sub$scenario_color[1]),
+          sub$scenario_name[1]))
+        var_header <- tags$tr(
+          tags$th("Category"),
+          lapply(seq_len(nrow(all_vars)), function(i) tags$th(all_vars$label[i])),
+          tags$th("Healthy / Unhealthy / Total (all variables)")
+        )
+        body_rows <- lapply(group_levels, function(grp) {
+          sub_g <- sub[sub$group == grp, ]
+          cells <- lapply(seq_len(nrow(all_vars)), function(i) {
+            sub_v <- sub_g[sub_g$variable_id == all_vars$id[i], ]
+            tags$td(align = "center", fmt_count_cell(sub_v))
+          })
+          tags$tr(tags$td(grp), cells, tags$td(align = "center", fmt_count_cell_total(sub_g)))
+        })
+        tagList(header_row, var_header, body_rows)
       })
 
       tags$table(class = "table table-bordered table-striped", tags$tbody(blocks))
