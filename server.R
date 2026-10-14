@@ -1856,6 +1856,17 @@ server <- function(input, output) {
     sample_ids <- if ("sample_id" %in% colnames(df)) as.character(df$sample_id) else paste("Row", seq_len(nrow(df)))
     all_vars <- sml_scenario_variables
 
+    # Same metadata-group value used by the plots (input$scenario_groupby), carried
+    # through here too so the classification table can offer a "per category" view
+    # without a second, separate column-choice control.
+    groupby <- input$scenario_groupby
+    group_vals <- if (!is.null(groupby) && nzchar(groupby) && groupby %in% colnames(df)) {
+      g <- as.character(df[[groupby]])
+      ifelse(is.na(g) | !nzchar(g), "(blank)", g)
+    } else {
+      rep("All samples", nrow(df))
+    }
+
     rows <- lapply(scenarios, function(s) {
       do.call(rbind, lapply(seq_len(nrow(df)), function(r) {
         do.call(rbind, lapply(seq_len(nrow(all_vars)), function(i) {
@@ -1875,7 +1886,7 @@ server <- function(input, output) {
             if (val >= thr) "healthy" else "unhealthy"
           }
           data.frame(scenario_id = s$id, scenario_name = current_scenario_name(s), scenario_color = s$color,
-                     sample_id = sample_ids[r], variable_id = v$id, variable_label = v$label,
+                     sample_id = sample_ids[r], group = group_vals[r], variable_id = v$id, variable_label = v$label,
                      status = status, stringsAsFactors = FALSE)
         }))
       }))
@@ -2212,6 +2223,20 @@ server <- function(input, output) {
     }
   })
 
+  # Shown only inside the Detailed view, and only offers "Per category" once a
+  # group-by column is actually selected above (in the plot section) - reuses
+  # that same choice rather than asking the user to pick a column twice.
+  output$sample_table_detail_mode_selector <- renderUI({
+    if (!identical(input$sample_table_view_mode, "detailed")) return(NULL)
+    groupby <- input$scenario_groupby
+    if (is.null(groupby) || !nzchar(groupby)) return(NULL)
+    current <- isolate(input$sample_table_detail_mode)
+    choices <- c("Per sample" = "sample", "Per category" = "category")
+    selected <- if (!is.null(current) && current %in% choices) current else "sample"
+    radioButtons("sample_table_detail_mode", label = NULL, choices = choices,
+                 selected = selected, inline = TRUE)
+  })
+
   output$sample_classification_table <- renderUI({
     cls <- sample_classification()
     all_vars <- sml_scenario_variables
@@ -2227,8 +2252,26 @@ server <- function(input, output) {
       }
     }
 
+    # "Healthy/Total" (Total = healthy + unhealthy, same denominator convention as
+    # the Aggregated view's % Healthy) with a small muted note for undetermined -
+    # shown, never silently dropped, since the single-sample view always shows
+    # a "–" for it too.
+    fmt_count_cell <- function(sub) {
+      healthy <- sum(sub$status == "healthy")
+      unhealthy <- sum(sub$status == "unhealthy")
+      undetermined <- sum(sub$status == "undetermined")
+      total <- healthy + unhealthy
+      main <- if (total > 0) sprintf("%d/%d", healthy, total) else "–"
+      tagList(
+        tags$span(style = "color:#2e7d32; font-weight:bold;", main),
+        if (undetermined > 0) tags$span(style = "color:#9e9e9e; font-size:0.85em;", sprintf(" (%d n/d)", undetermined)) else NULL
+      )
+    }
+
     view_mode <- input$sample_table_view_mode
     if (is.null(view_mode)) view_mode <- "aggregated"
+    detail_mode <- input$sample_table_detail_mode
+    if (is.null(detail_mode)) detail_mode <- "sample"
 
     if (view_mode == "aggregated") {
       blocks <- lapply(scenario_ids, function(sid) {
@@ -2274,6 +2317,33 @@ server <- function(input, output) {
         )
 
         tagList(header_row, var_header, var_rows, total_row)
+      })
+
+      tags$table(class = "table table-bordered table-striped", tags$tbody(blocks))
+
+    } else if (detail_mode == "category") {
+      validate(need(!is.null(input$scenario_groupby) && nzchar(input$scenario_groupby),
+                    "Pick a \"Colour/group samples by\" column above (in the plot section) to see samples grouped by category here."))
+      group_levels <- sort(unique(cls$group))
+      blocks <- lapply(scenario_ids, function(sid) {
+        sub <- cls[cls$scenario_id == sid, ]
+        header_row <- tags$tr(tags$td(colspan = nrow(all_vars) + 2,
+          style = sprintf("background-color:%s; color:#ffffff; font-weight:bold; padding:8px;", sub$scenario_color[1]),
+          sub$scenario_name[1]))
+        var_header <- tags$tr(
+          tags$th("Category"),
+          lapply(seq_len(nrow(all_vars)), function(i) tags$th(all_vars$label[i])),
+          tags$th("Healthy / Total (all variables)")
+        )
+        body_rows <- lapply(group_levels, function(grp) {
+          sub_g <- sub[sub$group == grp, ]
+          cells <- lapply(seq_len(nrow(all_vars)), function(i) {
+            sub_v <- sub_g[sub_g$variable_id == all_vars$id[i], ]
+            tags$td(align = "center", fmt_count_cell(sub_v))
+          })
+          tags$tr(tags$td(grp), cells, tags$td(align = "center", fmt_count_cell(sub_g)))
+        })
+        tagList(header_row, var_header, body_rows)
       })
 
       tags$table(class = "table table-bordered table-striped", tags$tbody(blocks))

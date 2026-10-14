@@ -822,13 +822,23 @@ ui <- dashboardPage(
                             condition = "input.sample_table_view_mode == 'aggregated' || input.sample_table_view_mode == null",
                             p(em("Per scenario, per variable: how many uploaded samples meet that variable's
                                   threshold (green), fail it (red), or can't be evaluated (grey) - plus the
-                                  totals and overall % healthy (undetermined samples excluded from that %)."))
+                                  totals and overall % healthy (undetermined samples excluded from that %)."),
+                              em(" This pools every uploaded sample together, regardless of any category you
+                                  may have picked below for the plots - switch to Detailed to see it broken
+                                  down by category."))
                         ),
                         conditionalPanel(
                             condition = "input.sample_table_view_mode == 'detailed'",
-                            p(em("For each uploaded sample and each scenario: green = meets that variable's threshold,
-                                  red = fails it, grey = variable not available for that sample. The last column
-                                  counts healthy/unhealthy/undetermined variables for that sample under that scenario."))
+                            uiOutput("sample_table_detail_mode_selector"),
+                            p(em("Per sample: for each uploaded sample and each scenario, green = meets that
+                                  variable's threshold, red = fails it, grey = variable not available for that
+                                  sample. The last column counts healthy/unhealthy/undetermined variables for
+                                  that sample under that scenario.")),
+                            p(em("Per category (only offered once a \"Colour/group samples by\" column is picked
+                                  below): for each category and each scenario, how many samples in that category
+                                  meet each variable's threshold, shown as healthy/total (green), with any
+                                  undetermined samples noted alongside rather than counted either way. The last
+                                  column is the same tally across all variables for that category."))
                         ),
                         uiOutput("sample_classification_table")
                     )
