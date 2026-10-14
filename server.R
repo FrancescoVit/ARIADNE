@@ -1770,10 +1770,27 @@ server <- function(input, output) {
   output$scenario_groupby_selector <- renderUI({
     cols <- uploaded_categorical_metadata_columns()
     if (length(cols) == 0) return(NULL)
-    choices <- c("None" = "", setNames(cols, cols))
+    # "__none__", not "" - with selectize (the selectInput default), an option
+    # whose value is the empty string doesn't reliably show back up as a pickable
+    # item once another option has been chosen, which made "None" look like it
+    # had vanished after picking a real column. selectize = FALSE too, so this
+    # is a plain, predictable <select> regardless.
+    choices <- c("None" = "__none__", setNames(cols, cols))
     current <- isolate(input$scenario_groupby)
-    selected <- if (!is.null(current) && current %in% choices) current else ""
-    selectInput("scenario_groupby", "Colour/group samples by", choices = choices, selected = selected)
+    selected <- if (!is.null(current) && current %in% choices) current else "__none__"
+    selectInput("scenario_groupby", "Colour/group samples by", choices = choices,
+                 selected = selected, selectize = FALSE)
+  })
+
+  # The real group-by column, or NULL if "None" is selected - or if the
+  # previously-selected column isn't in the current upload (e.g. after
+  # switching files). Every reader below uses this instead of the raw input,
+  # so "what counts as no grouping" is decided in exactly one place.
+  active_groupby_column <- reactive({
+    groupby <- input$scenario_groupby
+    df <- uploaded_samples()
+    if (is.null(groupby) || is.null(df) || !(groupby %in% colnames(df))) return(NULL)
+    groupby
   })
 
   output$scenario_plot_type_selector <- renderUI({
@@ -1803,8 +1820,8 @@ server <- function(input, output) {
     df <- uploaded_samples()
     validate(need(!is.null(df) && nrow(df) > 0, "Upload a CSV to see this view."))
     all_vars <- sml_scenario_variables
-    groupby <- input$scenario_groupby
-    group_vals <- if (!is.null(groupby) && nzchar(groupby) && groupby %in% colnames(df)) {
+    groupby <- active_groupby_column()
+    group_vals <- if (!is.null(groupby)) {
       g <- as.character(df[[groupby]])
       ifelse(is.na(g) | !nzchar(g), "(blank)", g)
     } else {
@@ -1856,11 +1873,11 @@ server <- function(input, output) {
     sample_ids <- if ("sample_id" %in% colnames(df)) as.character(df$sample_id) else paste("Row", seq_len(nrow(df)))
     all_vars <- sml_scenario_variables
 
-    # Same metadata-group value used by the plots (input$scenario_groupby), carried
-    # through here too so the classification table can offer a "per category" view
-    # without a second, separate column-choice control.
-    groupby <- input$scenario_groupby
-    group_vals <- if (!is.null(groupby) && nzchar(groupby) && groupby %in% colnames(df)) {
+    # Same metadata-group column used by the plots (active_groupby_column()),
+    # carried through here too so the classification table can offer a "per
+    # category" view without a second, separate column-choice control.
+    groupby <- active_groupby_column()
+    group_vals <- if (!is.null(groupby)) {
       g <- as.character(df[[groupby]])
       ifelse(is.na(g) | !nzchar(g), "(blank)", g)
     } else {
@@ -2030,8 +2047,7 @@ server <- function(input, output) {
       } else {
         setNames(rep_len(group_palette, length(group_levels)), group_levels)
       }
-      groupby_label <- input$scenario_groupby
-      legend_title <- if (!is.null(groupby_label) && nzchar(groupby_label)) groupby_label else NULL
+      legend_title <- active_groupby_column()
       # The scenario threshold lines are dashed on the plot (to read as a
       # reference line, not data) but a dashed sliver is hard to make out inside
       # a small legend key - override.aes keeps the dash on the plot and shows a
@@ -2185,8 +2201,8 @@ server <- function(input, output) {
       } else {
         paste("Row", seq_len(nrow(samples_df)))
       }
-      groupby <- input$scenario_groupby
-      sample_groups <- if (!is.null(groupby) && nzchar(groupby) && groupby %in% colnames(samples_df)) {
+      groupby <- active_groupby_column()
+      sample_groups <- if (!is.null(groupby)) {
         g <- as.character(samples_df[[groupby]])
         ifelse(is.na(g) | !nzchar(g), "(blank)", g)
       } else {
@@ -2213,7 +2229,7 @@ server <- function(input, output) {
         } else {
           setNames(rep_len(group_palette, length(group_levels)), group_levels)
         }
-        legend_title <- if (!is.null(groupby) && nzchar(groupby)) groupby else NULL
+        legend_title <- groupby
         # A second, independent colour scale (ggnewscale) - the scenario polygons/
         # lines above already own the plot's main colour scale; without this, one
         # scale_colour_manual() would silently overwrite the other instead of the
@@ -2239,8 +2255,7 @@ server <- function(input, output) {
   # that same choice rather than asking the user to pick a column twice.
   output$sample_table_detail_mode_selector <- renderUI({
     if (!identical(input$sample_table_view_mode, "detailed")) return(NULL)
-    groupby <- input$scenario_groupby
-    if (is.null(groupby) || !nzchar(groupby)) return(NULL)
+    if (is.null(active_groupby_column())) return(NULL)
     current <- isolate(input$sample_table_detail_mode)
     choices <- c("Per sample" = "sample", "Per category" = "category")
     selected <- if (!is.null(current) && current %in% choices) current else "sample"
@@ -2352,7 +2367,7 @@ server <- function(input, output) {
       tags$table(class = "table table-bordered table-striped", tags$tbody(blocks))
 
     } else if (detail_mode == "category") {
-      validate(need(!is.null(input$scenario_groupby) && nzchar(input$scenario_groupby),
+      validate(need(!is.null(active_groupby_column()),
                     "Pick a \"Colour/group samples by\" column above (in the plot section) to see samples grouped by category here."))
       group_levels <- sort(unique(cls$group))
       blocks <- lapply(scenario_ids, function(sid) {
