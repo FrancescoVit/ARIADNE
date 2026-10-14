@@ -1936,28 +1936,33 @@ server <- function(input, output) {
       rep("All samples", nrow(df))
     }
 
+    # Vectorised per (scenario, variable) - NOT per (scenario, sample, variable).
+    # The per-row version here used to do one rbind() per sample per variable per
+    # scenario - fine for a handful of uploaded samples, but a MINOTAUR selection
+    # can be thousands of rows: at ~15,000 samples that was measured at over a
+    # minute for a single scenario (the actual cause of the app appearing to
+    # hang), against ~0.1s for this version doing the same comparison as one
+    # vectorised op over the whole column instead of a value at a time.
     rows <- lapply(scenarios, function(s) {
-      do.call(rbind, lapply(seq_len(nrow(df)), function(r) {
-        do.call(rbind, lapply(seq_len(nrow(all_vars)), function(i) {
-          v <- all_vars[i, ]
-          val <- if (v$id %in% colnames(df)) suppressWarnings(as.numeric(df[[v$id]][r])) else NA_real_
-          thr <- if (v$part == "A") {
-            v$fixed_value
-          } else {
-            tv <- input[[paste0("thr_", s$id, "_", v$id)]]
-            if (is.null(tv)) NA_real_ else as.numeric(tv)
-          }
-          status <- if (is.na(val) || is.na(thr)) {
-            "undetermined"
-          } else if (v$direction == "below") {
-            if (val <= thr) "healthy" else "unhealthy"
-          } else {
-            if (val >= thr) "healthy" else "unhealthy"
-          }
-          data.frame(scenario_id = s$id, scenario_name = current_scenario_name(s), scenario_color = s$color,
-                     sample_id = sample_ids[r], group = group_vals[r], variable_id = v$id, variable_label = v$label,
-                     status = status, stringsAsFactors = FALSE)
-        }))
+      do.call(rbind, lapply(seq_len(nrow(all_vars)), function(i) {
+        v <- all_vars[i, ]
+        val <- if (v$id %in% colnames(df)) suppressWarnings(as.numeric(df[[v$id]])) else rep(NA_real_, nrow(df))
+        thr <- if (v$part == "A") {
+          v$fixed_value
+        } else {
+          tv <- input[[paste0("thr_", s$id, "_", v$id)]]
+          if (is.null(tv)) NA_real_ else as.numeric(tv)
+        }
+        status <- if (is.na(thr)) {
+          rep("undetermined", nrow(df))
+        } else if (v$direction == "below") {
+          ifelse(is.na(val), "undetermined", ifelse(val <= thr, "healthy", "unhealthy"))
+        } else {
+          ifelse(is.na(val), "undetermined", ifelse(val >= thr, "healthy", "unhealthy"))
+        }
+        data.frame(scenario_id = s$id, scenario_name = current_scenario_name(s), scenario_color = s$color,
+                   sample_id = sample_ids, group = group_vals, variable_id = v$id, variable_label = v$label,
+                   status = status, stringsAsFactors = FALSE)
       }))
     })
     do.call(rbind, rows)
@@ -2275,17 +2280,18 @@ server <- function(input, output) {
       } else {
         rep("All samples", nrow(samples_df))
       }
-      point_rows <- do.call(rbind, lapply(seq_len(nrow(samples_df)), function(r) {
-        do.call(rbind, lapply(seq_len(n_vars), function(i) {
-          v <- all_vars[i, ]
-          if (!(v$id %in% colnames(samples_df))) return(NULL)
-          raw_val <- suppressWarnings(as.numeric(samples_df[[v$id]][r]))
-          if (is.na(raw_val)) return(NULL)
-          rng <- axis_range[[v$id]]
-          if (raw_val < rng[1] || raw_val > rng[2]) return(NULL)
-          data.frame(sample = sample_ids[r], variable = v$label, group = sample_groups[r],
-                     position = normalize(raw_val, v$id), stringsAsFactors = FALSE)
-        }))
+      # Vectorised per variable (masking which samples to keep), not per sample
+      # per variable - same fix as sample_classification(), same reason (a
+      # MINOTAUR selection can be thousands of rows).
+      point_rows <- do.call(rbind, lapply(seq_len(n_vars), function(i) {
+        v <- all_vars[i, ]
+        if (!(v$id %in% colnames(samples_df))) return(NULL)
+        raw_val <- suppressWarnings(as.numeric(samples_df[[v$id]]))
+        rng <- axis_range[[v$id]]
+        keep <- !is.na(raw_val) & raw_val >= rng[1] & raw_val <= rng[2]
+        if (!any(keep)) return(NULL)
+        data.frame(sample = sample_ids[keep], variable = v$label, group = sample_groups[keep],
+                   position = normalize(raw_val[keep], v$id), stringsAsFactors = FALSE)
       }))
       if (!is.null(point_rows) && nrow(point_rows) > 0) {
         point_rows$variable <- factor(point_rows$variable, levels = all_vars$label)
