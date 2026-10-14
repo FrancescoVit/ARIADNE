@@ -111,15 +111,16 @@ ui <- dashboardPage(
                   br(),
                   br(),
                   br(),
-                  h4("There are three main modules in ARIADNE: The Overview, the Analysis, and the SML module."),
-                  h4("The Overview module is used to filter the database records on the basis of different metadata (i.e. land use, management,
+                  h4("ARIADNE is organized in the sidebar into two sections: MINOTAUR DATABASE and SOIL MONITORING LAW. Each has its own
+                     Overview module, so check the section header above a menu entry to tell them apart."),
+                  h4("In the MINOTAUR DATABASE section, the Overview module is used to filter the database records on the basis of different metadata (i.e. land use, management,
                      country, and biota group) and to visualize the number of selected records, their geographical distribution, and their
                      distribution per Member State. Records that are filtered in the Overview module, are used to display analysis in the Analysis module"),
                   h4("The Analysis module is used to show the actual analysis on the selected records. Here analysis are organized based on different indices
                      and on different level of soil biota"),
-                  h4("The SML module provides background information on the EU Soil Monitoring Law (Directive (EU) 2025/2360) and its Annex I soil
-                     descriptors, together with a Scenario Testing tool where you can define and compare different sets of national thresholds and,
-                     optionally, test them against your own uploaded sample data")
+                  h4("In the SOIL MONITORING LAW section, the Overview module provides background information on the EU Soil Monitoring Law (Directive (EU) 2025/2360) and its Annex I soil
+                     descriptors, together with a summary of existing national legislation touching each descriptor. The Scenario Testing module lets you define and compare different
+                     sets of national thresholds and, optionally, test them against your own uploaded sample data")
                   )
                 ),
               fluidRow(
