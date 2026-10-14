@@ -785,6 +785,15 @@ ui <- dashboardPage(
                                icon("download"), " Download CSV template"),
                         br(), br(),
                         fileInput("sample_upload", "Upload CSV", accept = ".csv"),
+                        p(em("Or, instead of uploading a file: classify whichever MINOTAUR sampling points
+                              are currently selected in the Overview tab's filters (land use, management,
+                              country, biota group). Coverage of SML variables in MINOTAUR is sparse, so
+                              expect several \"undetermined\" results - that reflects the data, not an error.
+                              Uploading a new file always switches back to it.")),
+                        actionButton("use_minotaur_selection", "Use current MINOTAUR samples selection",
+                                     icon = icon("database")),
+                        br(), br(),
+                        uiOutput("sml_data_source_status"),
                         uiOutput("sample_upload_warnings")
                     )
                 ),

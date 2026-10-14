@@ -1723,12 +1723,56 @@ server <- function(input, output) {
 
   # Uploaded samples are read straight from the temp path Shiny gives the file -
   # never written anywhere else, never persisted beyond this session.
+  # Which data source Scenario Testing is currently reading from - "upload" (a
+  # user CSV) or "minotaur" (the live MINOTAUR selection from Overview's
+  # sites_selected_reactive()). A fresh upload always switches back to "upload"
+  # mode, so there's no separate "go back" control to add.
+  rv_sml_source <- reactiveValues(mode = "upload")
+  observeEvent(input$use_minotaur_selection, { rv_sml_source$mode <- "minotaur" })
+  observeEvent(input$sample_upload, { rv_sml_source$mode <- "upload" })
+
+  # The current MINOTAUR/Overview selection, reshaped into the same shape a
+  # CSV upload would have: sample_id + whichever sml_scenario_variables columns
+  # MINOTAUR actually has real data for, plus a couple of ready-made categorical
+  # columns (country, land_use) for "Colour/group samples by". Real coverage is
+  # sparse - most sampling points will come back "undetermined" for bulk_density/
+  # phosphorus/soc_clay, that's the data, not a bug.
+  minotaur_samples_for_sml <- reactive({
+    sites <- sites_selected_reactive()
+    if (is.null(sites) || nrow(sites) == 0) return(NULL)
+    out <- data.frame(sample_id = sites$id_sampling_point, stringsAsFactors = FALSE)
+    if ("bulk_density" %in% colnames(sites)) {
+      out$bulk_density <- suppressWarnings(as.numeric(sites$bulk_density))
+    }
+    if ("phosphorus_available" %in% colnames(sites)) {
+      out$phosphorus <- suppressWarnings(as.numeric(sites$phosphorus_available))
+    }
+    if (all(c("soc_mean", "sand", "silt") %in% colnames(sites))) {
+      soc <- suppressWarnings(as.numeric(sites$soc_mean))
+      clay <- 100 - suppressWarnings(as.numeric(sites$sand)) - suppressWarnings(as.numeric(sites$silt))
+      # a handful of rows have sand+silt > 100 (bad source data) - 0-100 guard
+      # keeps that from producing a nonsensical or negative ratio downstream.
+      clay[!is.na(clay) & (clay <= 0 | clay > 100)] <- NA
+      out$soc_clay <- soc / clay
+    }
+    if ("country_code" %in% colnames(sites)) out$country <- sites$country_code
+    if ("study_landuse" %in% colnames(sites)) out$land_use <- sites$study_landuse
+    out
+  })
+
   uploaded_samples <- reactive({
     # NOT req(): req()'s silent-stop would abort the ENTIRE render of any output
     # that calls this reactive (e.g. scenario_radar_plot), not just the part that
     # needs the upload - meaning the scenario polygons would vanish too whenever
     # no file had been uploaded yet. Returning NULL lets each caller decide how
     # to handle "nothing uploaded" (they already all check for it).
+    # Despite the name, this is the single dispatch point for BOTH data sources -
+    # every other reactive/output in this file reads this one, never the file
+    # input or sites_selected_reactive() directly, so the upload-vs-MINOTAUR
+    # switch only has to happen here.
+    if (identical(rv_sml_source$mode, "minotaur")) {
+      return(minotaur_samples_for_sml())
+    }
     if (is.null(input$sample_upload)) return(NULL)
     tryCatch(
       utils::read.csv(input$sample_upload$datapath, stringsAsFactors = FALSE),
@@ -1816,9 +1860,17 @@ server <- function(input, output) {
   # per variable block (same row order as df) - constant "All samples" when no
   # grouping is selected, so downstream plotting code never needs to branch on
   # whether grouping is active, just on how many levels `group` actually has.
+  no_samples_message <- function() {
+    if (identical(rv_sml_source$mode, "minotaur")) {
+      "No MINOTAUR samples match the current Overview filters - adjust them, or upload a CSV instead."
+    } else {
+      "Upload a CSV to see this view."
+    }
+  }
+
   sample_values_long <- reactive({
     df <- uploaded_samples()
-    validate(need(!is.null(df) && nrow(df) > 0, "Upload a CSV to see this view."))
+    validate(need(!is.null(df) && nrow(df) > 0, no_samples_message()))
     all_vars <- sml_scenario_variables
     groupby <- active_groupby_column()
     group_vals <- if (!is.null(groupby)) {
@@ -1866,7 +1918,7 @@ server <- function(input, output) {
   # detailed classification tables (previously duplicated between them).
   sample_classification <- reactive({
     df <- uploaded_samples()
-    validate(need(!is.null(df) && nrow(df) > 0, "Upload a CSV to see classification results."))
+    validate(need(!is.null(df) && nrow(df) > 0, no_samples_message()))
     scenarios <- rv_scenarios$scenarios
     validate(need(length(scenarios) > 0, "Add at least one scenario to classify samples against."))
 
@@ -1909,6 +1961,21 @@ server <- function(input, output) {
       }))
     })
     do.call(rbind, rows)
+  })
+
+  output$sml_data_source_status <- renderUI({
+    df <- uploaded_samples()
+    n <- if (is.null(df)) 0 else nrow(df)
+    if (identical(rv_sml_source$mode, "minotaur")) {
+      p(style = "color:#1565c0; font-weight:bold;",
+        icon("database"),
+        sprintf(" Using %d MINOTAUR sampling point(s) from the current Overview selection.", n))
+    } else if (!is.null(input$sample_upload)) {
+      p(style = "color:#555;", icon("file-csv"),
+        sprintf(" Using %d sample(s) from your uploaded CSV.", n))
+    } else {
+      NULL
+    }
   })
 
   output$sample_upload_warnings <- renderUI({
