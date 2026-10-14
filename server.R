@@ -2019,31 +2019,38 @@ server <- function(input, output) {
       color_vec <- setNames(color_lookup$color, color_lookup$scenario)
 
       # "All samples" (the only level when no metadata grouping is selected) keeps
-      # the plot's original single fixed colour; a real grouping gets one Okabe-Ito
-      # colour per level, recycled if there are more levels than the palette.
+      # the plot's original single fixed colour; a real grouping gets one colour
+      # per level from group_palette (deliberately not okabe_ito_palette - that
+      # one's reserved for scenario identity, see global.R), recycled if there
+      # are more levels than the palette.
       group_levels <- sort(unique(vals$group))
       grouped <- length(group_levels) > 1 || !identical(group_levels, "All samples")
       group_colors <- if (!grouped) {
         c("All samples" = "#2C7FB8")
       } else {
-        setNames(rep_len(okabe_ito_palette, length(group_levels)), group_levels)
+        setNames(rep_len(group_palette, length(group_levels)), group_levels)
       }
       groupby_label <- input$scenario_groupby
       legend_title <- if (!is.null(groupby_label) && nzchar(groupby_label)) groupby_label else NULL
+      # The scenario threshold lines are dashed on the plot (to read as a
+      # reference line, not data) but a dashed sliver is hard to make out inside
+      # a small legend key - override.aes keeps the dash on the plot and shows a
+      # plain solid line in the legend only.
+      scenario_guide <- guide_legend(override.aes = list(linetype = 1))
 
       if (plot_type == "histogram") {
         p <- if (!grouped) {
           ggplot(vals, aes(x = value)) +
-            geom_histogram(bins = 15, fill = "#2C7FB8", alpha = 0.7, color = "white", na.rm = TRUE)
+            geom_histogram(bins = 15, fill = "#2C7FB8", alpha = 0.7, color = "gray20", na.rm = TRUE)
         } else {
           ggplot(vals, aes(x = value, fill = group)) +
-            geom_histogram(bins = 15, alpha = 0.6, color = "white", position = "identity", na.rm = TRUE) +
+            geom_histogram(bins = 15, alpha = 0.6, color = "gray20", position = "identity", na.rm = TRUE) +
             scale_fill_manual(values = group_colors)
         }
         p +
           geom_vline(data = thr, aes(xintercept = thr, color = scenario),
                      linetype = "dashed", linewidth = 0.8, na.rm = TRUE) +
-          scale_color_manual(values = color_vec) +
+          scale_color_manual(values = color_vec, guide = scenario_guide) +
           facet_wrap(~variable, scales = "free_x", ncol = 3) +
           theme_bw() +
           theme(strip.text = element_text(size = 9)) +
@@ -2061,7 +2068,7 @@ server <- function(input, output) {
           geom_jitter(width = 0.15, height = 0, alpha = 0.3, size = 0.8, na.rm = TRUE) +
           geom_hline(data = thr, aes(yintercept = thr, color = scenario),
                      linetype = "dashed", linewidth = 0.8, na.rm = TRUE) +
-          scale_color_manual(values = color_vec) +
+          scale_color_manual(values = color_vec, guide = scenario_guide) +
           facet_wrap(~variable, scales = "free_y", ncol = 3) +
           theme_bw() +
           theme(strip.text = element_text(size = 9),
@@ -2149,7 +2156,11 @@ server <- function(input, output) {
     if (is.null(zoom_max) || zoom_max <= 0) zoom_max <- 1
 
     p <- ggplot(plot_df, aes(x = variable, y = position, group = scenario, color = scenario, fill = scenario)) +
-      geom_polygon(alpha = 0.18, linewidth = 0) +
+      # show.legend = FALSE here: this low-alpha fill layer would otherwise wash
+      # out the combined colour+fill legend key, making the scenario's line look
+      # faint/broken instead of a clean solid line - geom_path + geom_point below
+      # are enough to give each scenario a legible legend entry on their own.
+      geom_polygon(alpha = 0.18, linewidth = 0, show.legend = FALSE) +
       geom_path(linewidth = 1) +
       geom_point(size = 2) +
       scale_color_manual(values = color_map) +
@@ -2200,7 +2211,7 @@ server <- function(input, output) {
         point_colors <- if (!grouped) {
           c("All samples" = "black")
         } else {
-          setNames(rep_len(okabe_ito_palette, length(group_levels)), group_levels)
+          setNames(rep_len(group_palette, length(group_levels)), group_levels)
         }
         legend_title <- if (!is.null(groupby) && nzchar(groupby)) groupby else NULL
         # A second, independent colour scale (ggnewscale) - the scenario polygons/
@@ -2252,10 +2263,11 @@ server <- function(input, output) {
       }
     }
 
-    # "Healthy/Total" (Total = healthy + unhealthy, same denominator convention as
-    # the Aggregated view's % Healthy) with a small muted note for undetermined -
-    # shown, never silently dropped, since the single-sample view always shows
-    # a "–" for it too.
+    # Per-variable cells: plain "Healthy/Total" (Total = healthy + unhealthy, same
+    # denominator convention as the Aggregated view's % Healthy), in normal black -
+    # a whole table of green numbers reads as "all healthy" at a glance, which
+    # isn't the point here. Undetermined is still noted, never silently dropped,
+    # since the single-sample view always shows a "–" for it too.
     fmt_count_cell <- function(sub) {
       healthy <- sum(sub$status == "healthy")
       unhealthy <- sum(sub$status == "unhealthy")
@@ -2263,7 +2275,25 @@ server <- function(input, output) {
       total <- healthy + unhealthy
       main <- if (total > 0) sprintf("%d/%d", healthy, total) else "–"
       tagList(
-        tags$span(style = "color:#2e7d32; font-weight:bold;", main),
+        tags$span(main),
+        if (undetermined > 0) tags$span(style = "color:#9e9e9e; font-size:0.85em;", sprintf(" (%d n/d)", undetermined)) else NULL
+      )
+    }
+
+    # Row-end summary cell only: healthy/unhealthy/total, each coloured (green/
+    # red/black) - this one column is meant to be read as a quick health
+    # snapshot for the category, unlike the plain per-variable cells above.
+    fmt_count_cell_total <- function(sub) {
+      healthy <- sum(sub$status == "healthy")
+      unhealthy <- sum(sub$status == "unhealthy")
+      undetermined <- sum(sub$status == "undetermined")
+      total <- healthy + unhealthy
+      tagList(
+        tags$span(style = "color:#2e7d32; font-weight:bold;", healthy),
+        " / ",
+        tags$span(style = "color:#c62828; font-weight:bold;", unhealthy),
+        " / ",
+        tags$span(style = "font-weight:bold;", total),
         if (undetermined > 0) tags$span(style = "color:#9e9e9e; font-size:0.85em;", sprintf(" (%d n/d)", undetermined)) else NULL
       )
     }
@@ -2333,7 +2363,7 @@ server <- function(input, output) {
         var_header <- tags$tr(
           tags$th("Category"),
           lapply(seq_len(nrow(all_vars)), function(i) tags$th(all_vars$label[i])),
-          tags$th("Healthy / Total (all variables)")
+          tags$th("Healthy / Unhealthy / Total (all variables)")
         )
         body_rows <- lapply(group_levels, function(grp) {
           sub_g <- sub[sub$group == grp, ]
@@ -2341,7 +2371,7 @@ server <- function(input, output) {
             sub_v <- sub_g[sub_g$variable_id == all_vars$id[i], ]
             tags$td(align = "center", fmt_count_cell(sub_v))
           })
-          tags$tr(tags$td(grp), cells, tags$td(align = "center", fmt_count_cell(sub_g)))
+          tags$tr(tags$td(grp), cells, tags$td(align = "center", fmt_count_cell_total(sub_g)))
         })
         tagList(header_row, var_header, body_rows)
       })

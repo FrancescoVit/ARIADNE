@@ -275,6 +275,18 @@ sml_annex_precedent_index <- data.frame(
 okabe_ito_palette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442",
                         "#0072B2", "#D55E00", "#CC79A7", "#000000")
 
+# ColorBrewer "Set2" (RColorBrewer::brewer.pal(8, "Set2"); brewer.pal.info["Set2",
+# "colorblind"] is TRUE) - used for the Scenario Testing "Colour/group samples by"
+# metadata categories, kept deliberately separate from okabe_ito_palette (used for
+# scenario identity) so the two legends never look alike. Re-ordered from
+# ColorBrewer's own order so the first ~5 entries (the realistic case: few
+# category levels shown alongside a handful of scenarios) stay furthest in hue
+# from Okabe-Ito's first ~5 (orange/sky-blue/teal/yellow/blue) - the teal, orange
+# and yellow entries that would otherwise clash are pushed to the end instead of
+# dropped, since Set2 is only certified colorblind-safe as the full 8-color set.
+group_palette <- c("#E78AC3", "#E5C494", "#A6D854", "#8DA0CB", "#B3B3B3",
+                    "#66C2A5", "#FC8D62", "#FFD92F")
+
 # ggplot2 has no built-in radar/spider coordinate system; this is the standard
 # recipe (coord_polar with straight, not curved, grid lines between axes).
 coord_radar <- function(theta = "x", start = 0, direction = 1) {
