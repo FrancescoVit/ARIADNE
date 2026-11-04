@@ -106,24 +106,24 @@ ui <- dashboardPage(
                   h1("Welcome to ARIADNE version 4.3"),
                   br(),
                   br(),
-                  h4("Welcome to the shARed mInotAur Database exploratioN Environment, or in short ARIADNE."),
+                  h4("Welcome to the shARed mInotAur Database exploratioN Environment (ARIADNE)."),
                   br(),
-                  h4("This application was developed as part of the actions of MINOTAUR project, under the EJP Soil program. 
-                     The objective of ARIADNE is to provide an easy to use user interface for the exploration of Europena soil 
-                     biodiversity data that were collected and harmonized during the MINOTAUR project"), # maybe not proper as it is using HTML header
+                  h4("This application was developed as part of the MINOTAUR project under the EJP Soil programme.
+                     The objective of ARIADNE is to provide an easy-to-use interface for exploring European soil
+                     biodiversity data collected and harmonised during the MINOTAUR project."), # maybe not proper as it is using HTML header
                   br(),
                   br(),
                   br(),
-                  h4("ARIADNE is organized in the sidebar into two sections: MINOTAUR DATABASE and SOIL MONITORING LAW. Each has its own
-                     Overview module, so check the section header above a menu entry to tell them apart."),
-                  h4("In the MINOTAUR DATABASE section, the Overview module is used to filter the database records on the basis of different metadata (i.e. land use, management,
-                     country, and biota group) and to visualize the number of selected records, their geographical distribution, and their
-                     distribution per Member State. Records that are filtered in the Overview module, are used to display analysis in the Analysis module"),
-                  h4("The Analysis module is used to show the actual analysis on the selected records. Here analysis are organized based on different indices
-                     and on different level of soil biota"),
+                  h4("ARIADNE is organised into two sections in the sidebar: MINOTAUR DATABASE and SOIL MONITORING LAW. Each section has its own
+                     Overview module, so check the section heading above the menu entry to tell them apart."),
+                  h4("In the MINOTAUR DATABASE section, the Overview module is used to filter database records by different metadata (i.e. land use, management,
+                     country and biota group) and to visualise the number of selected records, their geographical distribution and their
+                     distribution by Member State. Records filtered in the Overview module are used for the analyses displayed in the Analysis module."),
+                  h4("The Analysis module displays the analyses performed on the selected records. The analyses are organised according to different indices
+                     and levels of soil biota."),
                   h4("In the SOIL MONITORING LAW section, the Overview module provides background information on the EU Soil Monitoring Law (Directive (EU) 2025/2360) and its Annex I soil
-                     descriptors, together with a summary of existing national legislation touching each descriptor. The Scenario Testing module lets you define and compare different
-                     sets of national thresholds and, optionally, test them against your own uploaded sample data")
+                     descriptors, together with a summary of existing national legislation relating to each descriptor. The Scenario Testing module allows the user to define and compare different
+                     sets of national thresholds and, optionally, test them against its own uploaded sample data.")
                   )
                 ),
               fluidRow(
