@@ -39,7 +39,7 @@ server <- function(input, output) {
     tags$div(
       style = "text-align:center;",
       tags$img(
-        src = "https://raw.githubusercontent.com/FrancescoVit/ARIADNE/main/src/MINOTAUR_Logo_PNG.png",
+        src = "MINOTAUR_Logo_PNG.png",
         style = "max-width:100%; height:auto;"
       )
     )
