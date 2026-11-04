@@ -5,6 +5,7 @@
 # Mocali Stefano §
 # Sara Del Duca §
 # Elena Tondini §
+# Irene Criscuoli ç 
 # Vivianne Yayende +
 # Antonio Bispo +
 # Mario Adam +
@@ -15,6 +16,7 @@
 # stefano.mocali@crea.gov.it
 # sara.delduca@crea.gov.it
 # elena.tondini@crea.gov.it
+# irene.criscuoli@crea.gov.it
 # vivianne.koyao-yayende@inrae.fr
 # antonio.bispo@inrae.fr
 # mario.adam@inrae.fr
@@ -22,6 +24,7 @@
 #
 # Author Affiliation:
 # § Research Centre for Agriculture and Environment, Council for Agricultural Research and Economics (CREA-AA)
+# ç Research Centre for Agricultural Policies and Bioeconomy, Council for Agricultural Research and Economics (CREA-PB)
 # + National Research Institute for Agriculture, Food and Environment (INRAE)
 # @ BOKU University (BOKU)
 
