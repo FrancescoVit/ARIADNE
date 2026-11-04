@@ -123,7 +123,7 @@ ui <- dashboardPage(
                      and levels of soil biota."),
                   h4("In the SOIL MONITORING LAW section, the Overview module provides background information on the EU Soil Monitoring Law (Directive (EU) 2025/2360) and its Annex I soil
                      descriptors, together with a summary of existing national legislation relating to each descriptor. The Scenario Testing module allows the user to define and compare different
-                     sets of national thresholds and, optionally, test them against its own uploaded sample data.")
+                     sets of national thresholds and, optionally, test them against their own uploaded sample data.")
                   )
                 ),
               fluidRow(
