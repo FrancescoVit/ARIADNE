@@ -781,6 +781,10 @@ ui <- dashboardPage(
                         p(em("Optional. Upload a CSV of your own samples to plot them as points against the
                               scenarios above. The file is only held in your browser session - it is never
                               written to disk or shared, and disappears when the session ends.")),
+                        p(strong("The file must follow the template: every template column (sample_id and all
+                                  the SML variables) must be present, with exactly the same name, even for
+                                  variables you have no data for - in that case just leave the column empty.
+                                  Files missing any template column are not loaded.")),
                         p(em("You can add your own extra columns (land use, treatment, site, ...) beyond the
                               SML variables - any categorical one becomes available below as a way to
                               colour/group the samples in the plot.")),
