@@ -2163,6 +2163,29 @@ server <- function(input, output) {
       }
 
       if (plot_type == "histogram") {
+        # Individual samples as points in a strip just below the bars (like the
+        # jittered points on the violin), so the single values are always
+        # visible, not only the binned counts. The strip's height is relative to
+        # the tallest bar (approximated with 15 equal bins per variable, same as
+        # the histogram), so it stays proportionate from a handful of uploaded
+        # samples to thousands of MINOTAUR ones; the y axis only labels counts
+        # >= 0, the strip below 0 carries no count.
+        max_count <- max(1, unlist(lapply(split(vals$value, vals$variable, drop = TRUE), function(x) {
+          x <- x[!is.na(x)]
+          if (length(x) == 0) return(0)
+          if (length(unique(x)) == 1) return(length(x))
+          max(table(cut(x, breaks = 15)))
+        })))
+        strip_y <- -0.08 * max_count
+        n_points <- sum(!is.na(vals$value))
+        point_alpha <- if (n_points > 500) 0.25 else 0.7
+        sample_points <- if (!grouped) {
+          geom_jitter(aes(y = strip_y), width = 0, height = 0.025 * max_count, shape = 21,
+                      fill = "#2C7FB8", color = "gray20", size = 1.6, alpha = point_alpha, na.rm = TRUE)
+        } else {
+          geom_jitter(aes(y = strip_y, fill = group), width = 0, height = 0.025 * max_count, shape = 21,
+                      color = "gray20", size = 1.6, alpha = point_alpha, na.rm = TRUE, show.legend = FALSE)
+        }
         p <- if (!grouped) {
           ggplot(vals, aes(x = value)) +
             healthy_shading("x") +
@@ -2173,7 +2196,11 @@ server <- function(input, output) {
             geom_histogram(bins = 15, alpha = 0.6, color = "gray20", position = "identity", na.rm = TRUE) +
             scale_fill_manual(values = group_colors)
         }
-        p +
+        p + sample_points +
+          scale_y_continuous(breaks = function(lims) {
+            b <- pretty(c(0, lims[2]))
+            b[b >= 0 & b == round(b)]
+          }) +
           geom_vline(data = thr, aes(xintercept = thr, color = scenario),
                      linetype = "dashed", linewidth = 0.8, na.rm = TRUE) +
           scale_color_manual(values = color_vec, guide = scenario_guide) +
