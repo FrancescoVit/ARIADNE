@@ -851,9 +851,11 @@ ui <- dashboardPage(
                             p(em("Per category (only offered once a \"Colour/group samples by\" column is picked
                                   below): for each category and each scenario, how many samples in that category
                                   meet each variable's threshold, shown as healthy/total, with any undetermined
-                                  samples noted alongside rather than counted either way. The last column gives
-                                  the same tally across all variables for that category, with healthy, unhealthy
-                                  and total each coloured separately."))
+                                  samples noted alongside rather than counted either way. The last column shows
+                                  how the category's samples split by number of failed variables (0, 1, 2, 3 or
+                                  more; n/d = no variable could be evaluated for that sample), with the number of
+                                  samples in each segment - the more green and yellow, the closer the category is
+                                  to meeting the scenario."))
                         ),
                         uiOutput("sample_classification_table")
                     )

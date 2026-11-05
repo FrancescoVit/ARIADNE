@@ -2385,23 +2385,52 @@ server <- function(input, output) {
       )
     }
 
-    # Row-end summary cell only: healthy/unhealthy/total, each coloured (green/
-    # red/black) - this one column is meant to be read as a quick health
-    # snapshot for the category, unlike the plain per-variable cells above.
-    fmt_count_cell_total <- function(sub) {
-      healthy <- sum(sub$status == "healthy")
-      unhealthy <- sum(sub$status == "unhealthy")
-      undetermined <- sum(sub$status == "undetermined")
-      total <- healthy + unhealthy
+    # Row-end summary cell only: how the category's SAMPLES split by number of
+    # failed variables (0 / 1 / 2 / 3+), drawn as one stacked bar with the
+    # sample count inside each segment. Replaces a count of sample x variable
+    # pairs, which mixed "how many samples" with "how many variables". A plain
+    # healthy/unhealthy verdict per sample was tried and rejected: one failed
+    # variable is enough to make a sample unhealthy, so nearly every category
+    # read 0 healthy and a category one variable away from the target looked
+    # the same as one failing everywhere. Samples with no evaluable variable at
+    # all get their own grey segment rather than counting as "0 failed".
+    failed_vars_classes <- data.frame(
+      label = c("0", "1", "2", "3+", "n/d"),
+      color = c("#2e7d32", "#f9a825", "#ef6c00", "#c62828", "#bdbdbd"),
+      text  = c("#ffffff", "#000000", "#ffffff", "#ffffff", "#000000"),
+      stringsAsFactors = FALSE
+    )
+    fmt_failed_vars_bar <- function(sub) {
+      n_failed <- tapply(sub$status == "unhealthy", sub$sample_id, sum)
+      n_evaluated <- tapply(sub$status != "undetermined", sub$sample_id, sum)
+      cls_label <- ifelse(n_evaluated == 0, "n/d",
+                   ifelse(n_failed >= 3, "3+", as.character(n_failed)))
+      counts <- table(factor(cls_label, levels = failed_vars_classes$label))
+      n_samples <- length(cls_label)
+      segments <- lapply(seq_len(nrow(failed_vars_classes)), function(i) {
+        k <- counts[[i]]
+        if (k == 0) return(NULL)
+        tags$div(
+          title = sprintf("%d sample(s) with %s failed variable(s)", k, failed_vars_classes$label[i]),
+          style = sprintf("flex:%d; background-color:%s; color:%s; text-align:center; font-size:0.85em; font-weight:bold; line-height:20px; min-width:18px;",
+                          k, failed_vars_classes$color[i], failed_vars_classes$text[i]),
+          k
+        )
+      })
       tagList(
-        tags$span(style = "color:#2e7d32; font-weight:bold;", healthy),
-        " / ",
-        tags$span(style = "color:#c62828; font-weight:bold;", unhealthy),
-        " / ",
-        tags$span(style = "font-weight:bold;", total),
-        if (undetermined > 0) tags$span(style = "color:#9e9e9e; font-size:0.85em;", sprintf(" (%d n/d)", undetermined)) else NULL
+        tags$div(style = "display:flex; width:100%; min-width:140px; border-radius:3px; overflow:hidden;", segments),
+        tags$div(style = "color:#555; font-size:0.8em; margin-top:2px;", sprintf("%d sample(s)", n_samples))
       )
     }
+    failed_vars_legend <- tags$div(
+      style = "font-size:0.8em; font-weight:normal; margin-top:4px;",
+      lapply(seq_len(nrow(failed_vars_classes)), function(i) {
+        tags$span(style = "margin-right:6px; white-space:nowrap;",
+          tags$span(style = sprintf("display:inline-block; width:10px; height:10px; background-color:%s; margin-right:2px;",
+                                    failed_vars_classes$color[i])),
+          failed_vars_classes$label[i])
+      })
+    )
 
     view_mode <- input$sample_table_view_mode
     if (is.null(view_mode)) view_mode <- "aggregated"
@@ -2468,7 +2497,7 @@ server <- function(input, output) {
         var_header <- tags$tr(
           tags$th("Category"),
           lapply(seq_len(nrow(all_vars)), function(i) tags$th(all_vars$label[i])),
-          tags$th("Healthy / Unhealthy / Total (all variables)")
+          tags$th("Samples by number of failed variables", failed_vars_legend)
         )
         body_rows <- lapply(group_levels, function(grp) {
           sub_g <- sub[sub$group == grp, ]
@@ -2476,7 +2505,7 @@ server <- function(input, output) {
             sub_v <- sub_g[sub_g$variable_id == all_vars$id[i], ]
             tags$td(align = "center", fmt_count_cell(sub_v))
           })
-          tags$tr(tags$td(grp), cells, tags$td(align = "center", fmt_count_cell_total(sub_g)))
+          tags$tr(tags$td(grp), cells, tags$td(fmt_failed_vars_bar(sub_g)))
         })
         tagList(header_row, var_header, body_rows)
       })
