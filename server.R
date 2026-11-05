@@ -2535,7 +2535,7 @@ server <- function(input, output) {
       blocks <- lapply(scenario_ids, function(sid) {
         sub <- cls[cls$scenario_id == sid, ]
         header_row <- tags$tr(tags$td(colspan = 5,
-          style = sprintf("background-color:%s; color:#ffffff; font-weight:bold; padding:8px;", sub$scenario_color[1]),
+          style = sprintf("background-color:%s; color:#ffffff; font-weight:bold; padding:8px; border:2px solid #333333;", sub$scenario_color[1]),
           sub$scenario_name[1]))
         var_header <- tags$tr(tags$th("Variable"), tags$th("Healthy"), tags$th("Unhealthy"),
                                tags$th("Undetermined"), tags$th("% Healthy"))
@@ -2586,7 +2586,7 @@ server <- function(input, output) {
       blocks <- lapply(scenario_ids, function(sid) {
         sub <- cls[cls$scenario_id == sid, ]
         header_row <- tags$tr(tags$td(colspan = nrow(all_vars) + 2,
-          style = sprintf("background-color:%s; color:#ffffff; font-weight:bold; padding:8px;", sub$scenario_color[1]),
+          style = sprintf("background-color:%s; color:#ffffff; font-weight:bold; padding:8px; border:2px solid #333333;", sub$scenario_color[1]),
           sub$scenario_name[1]))
         var_header <- tags$tr(
           tags$th("Category"),
@@ -2611,7 +2611,7 @@ server <- function(input, output) {
       blocks <- lapply(scenario_ids, function(sid) {
         sub <- cls[cls$scenario_id == sid, ]
         header_row <- tags$tr(tags$td(colspan = nrow(all_vars) + 2,
-          style = sprintf("background-color:%s; color:#ffffff; font-weight:bold; padding:8px;", sub$scenario_color[1]),
+          style = sprintf("background-color:%s; color:#ffffff; font-weight:bold; padding:8px; border:2px solid #333333;", sub$scenario_color[1]),
           sub$scenario_name[1]))
         var_header <- tags$tr(
           tags$th("Sample"),
