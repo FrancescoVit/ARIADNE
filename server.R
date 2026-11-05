@@ -1781,10 +1781,34 @@ server <- function(input, output) {
       return(minotaur_samples_for_sml())
     }
     if (is.null(input$sample_upload)) return(NULL)
+    # A file that doesn't follow the template is rejected outright (treated as
+    # no data), with a message asking to use the template - see
+    # upload_template_problem(). Deliberately no column mapping/guessing: the
+    # template is the contract, and silently matching "EC" to "ec" or "P" to
+    # "phosphorus" would hide unit and meaning mismatches.
+    if (!is.null(upload_template_problem())) return(NULL)
+    raw_upload()
+  })
+
+  raw_upload <- reactive({
+    if (is.null(input$sample_upload)) return(NULL)
     tryCatch(
       utils::read.csv(input$sample_upload$datapath, stringsAsFactors = FALSE),
       error = function(e) NULL
     )
+  })
+
+  # Template columns an uploaded file must have, with exactly these names (values
+  # may be left empty). NULL when the file is fine (or nothing is uploaded), else
+  # a list describing what's wrong, used for the rejection message.
+  template_required_columns <- c("sample_id", sml_scenario_variables$id)
+  upload_template_problem <- reactive({
+    if (is.null(input$sample_upload)) return(NULL)
+    df <- raw_upload()
+    if (is.null(df)) return(list(unreadable = TRUE, missing = character(0)))
+    missing <- setdiff(template_required_columns, colnames(df))
+    if (length(missing) == 0) return(NULL)
+    list(unreadable = FALSE, missing = missing)
   })
 
   n_uploaded <- reactive({
@@ -1872,6 +1896,8 @@ server <- function(input, output) {
       "No sample data loaded - upload a CSV or use the current MINOTAUR selection to see this view."
     } else if (identical(rv_sml_source$mode, "minotaur")) {
       "No MINOTAUR samples match the current Overview filters - adjust them, or upload a CSV instead."
+    } else if (!is.null(upload_template_problem())) {
+      "The uploaded file doesn't follow the CSV template - see the message in the upload box above."
     } else {
       "Upload a CSV to see this view."
     }
@@ -1988,6 +2014,20 @@ server <- function(input, output) {
       p(style = "color:#1565c0; font-weight:bold;",
         icon("database"),
         sprintf(" Using %d MINOTAUR sampling point(s) from the current Overview selection.", n))
+    } else if (!is.null(problem <- upload_template_problem())) {
+      tags$div(
+        style = "border:1px solid #c62828; background-color:#ffebee; border-radius:4px; padding:10px 14px;",
+        p(style = "color:#c62828; font-weight:bold; margin-bottom:6px;", icon("triangle-exclamation"),
+          if (problem$unreadable) " The uploaded file could not be read as a CSV."
+          else " The uploaded file doesn't follow the CSV template, so it was not loaded."),
+        if (!problem$unreadable) p(
+          "Missing column(s), named exactly as in the template: ",
+          tags$code(paste(problem$missing, collapse = ", ")), "."),
+        p("Please download the template, copy your data into it keeping its column names
+           (empty values are fine, and you can add your own extra columns for grouping), then upload it again."),
+        tags$a(href = "sml_scenario_template.csv", download = NA, class = "btn btn-danger",
+               icon("download"), " Download CSV template")
+      )
     } else if (!is.null(input$sample_upload)) {
       p(style = "color:#555;", icon("file-csv"),
         sprintf(" Using %d sample(s) from your uploaded CSV.", n))
