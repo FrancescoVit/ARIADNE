@@ -1914,7 +1914,7 @@ server <- function(input, output) {
           if (is.null(tv)) NA_real_ else as.numeric(tv)
         }
         data.frame(variable = v$label, scenario = current_scenario_name(s),
-                   color = s$color, thr = thr, stringsAsFactors = FALSE)
+                   color = s$color, thr = thr, direction = v$direction, stringsAsFactors = FALSE)
       }))
     })
     out <- do.call(rbind, rows)
@@ -2139,12 +2139,37 @@ server <- function(input, output) {
       # plain solid line in the legend only.
       scenario_guide <- guide_legend(override.aes = list(linetype = 1))
 
+      # Shaded "healthy side" of each scenario's threshold, in the scenario's
+      # colour: the plots use each variable's raw scale, so for some variables
+      # healthy is below the line and for others above it - the dashed line alone
+      # didn't say which. One layer per scenario with a fixed (non-mapped) fill,
+      # because the fill scale is already taken by the metadata grouping. Drawn
+      # before the data so bars/violins sit on top; where scenarios overlap the
+      # shading simply gets darker.
+      thr_shade <- thr[!is.na(thr$thr), ]
+      thr_shade$lo <- ifelse(thr_shade$direction == "below", -Inf, thr_shade$thr)
+      thr_shade$hi <- ifelse(thr_shade$direction == "below", thr_shade$thr, Inf)
+      healthy_shading <- function(axis) {
+        lapply(unique(thr_shade$scenario), function(sc) {
+          d <- thr_shade[thr_shade$scenario == sc, ]
+          if (axis == "x") {
+            geom_rect(data = d, aes(xmin = lo, xmax = hi), ymin = -Inf, ymax = Inf,
+                      fill = d$color[1], alpha = 0.12, inherit.aes = FALSE)
+          } else {
+            geom_rect(data = d, aes(ymin = lo, ymax = hi), xmin = -Inf, xmax = Inf,
+                      fill = d$color[1], alpha = 0.12, inherit.aes = FALSE)
+          }
+        })
+      }
+
       if (plot_type == "histogram") {
         p <- if (!grouped) {
           ggplot(vals, aes(x = value)) +
+            healthy_shading("x") +
             geom_histogram(bins = 15, fill = "#2C7FB8", alpha = 0.7, color = "gray20", na.rm = TRUE)
         } else {
           ggplot(vals, aes(x = value, fill = group)) +
+            healthy_shading("x") +
             geom_histogram(bins = 15, alpha = 0.6, color = "gray20", position = "identity", na.rm = TRUE) +
             scale_fill_manual(values = group_colors)
         }
@@ -2159,9 +2184,11 @@ server <- function(input, output) {
       } else {
         p <- if (!grouped) {
           ggplot(vals, aes(x = 1, y = value)) +
+            healthy_shading("y") +
             geom_violin(fill = "#2C7FB8", alpha = 0.5, color = "gray20", trim = FALSE, na.rm = TRUE)
         } else {
           ggplot(vals, aes(x = group, y = value, fill = group)) +
+            healthy_shading("y") +
             geom_violin(alpha = 0.5, color = "gray20", trim = FALSE, na.rm = TRUE) +
             scale_fill_manual(values = group_colors)
         }

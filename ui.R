@@ -819,7 +819,10 @@ ui <- dashboardPage(
                         ),
                         conditionalPanel(
                             condition = "input.scenario_plot_type == 'histogram' || input.scenario_plot_type == 'violin'",
-                            p(em("Dashed lines mark each scenario's threshold (same colors as its legend)."))
+                            p(em("Dashed lines mark each scenario's threshold (same colors as its legend). The
+                                  shaded area in the same colour is the healthy side of that threshold: below it
+                                  for some variables, above it for others. Where scenarios overlap the shading
+                                  gets darker."))
                         ),
                         plotOutput("scenario_radar_plot", height = "600px")
                     )
