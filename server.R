@@ -2434,19 +2434,6 @@ server <- function(input, output) {
     }
   })
 
-  # Shown only inside the Detailed view, and only offers "Per category" once a
-  # group-by column is actually selected above (in the plot section) - reuses
-  # that same choice rather than asking the user to pick a column twice.
-  output$sample_table_detail_mode_selector <- renderUI({
-    if (!identical(input$sample_table_view_mode, "detailed")) return(NULL)
-    if (is.null(active_groupby_column())) return(NULL)
-    current <- isolate(input$sample_table_detail_mode)
-    choices <- c("Per sample" = "sample", "Per category" = "category")
-    selected <- if (!is.null(current) && current %in% choices) current else "sample"
-    radioButtons("sample_table_detail_mode", label = NULL, choices = choices,
-                 selected = selected, inline = TRUE)
-  })
-
   output$sample_classification_table <- renderUI({
     cls <- sample_classification()
     all_vars <- sml_scenario_variables
@@ -2463,7 +2450,7 @@ server <- function(input, output) {
     }
 
     # Per-variable cells: plain "Healthy/Total" (Total = healthy + unhealthy, same
-    # denominator convention as the Aggregated view's % Healthy), in normal black -
+    # denominator convention as the Per variable view's % Healthy), in normal black -
     # a whole table of green numbers reads as "all healthy" at a glance, which
     # isn't the point here. Undetermined is still noted, never silently dropped,
     # since the single-sample view always shows a "–" for it too.
@@ -2526,12 +2513,13 @@ server <- function(input, output) {
       })
     )
 
+    # One flat selector: Per variable (all samples pooled) / Per sample / Per
+    # category. "Per category" is always offered; without a group-by column it
+    # shows a hint (validate below) instead of being hidden.
     view_mode <- input$sample_table_view_mode
-    if (is.null(view_mode)) view_mode <- "aggregated"
-    detail_mode <- input$sample_table_detail_mode
-    if (is.null(detail_mode)) detail_mode <- "sample"
+    if (is.null(view_mode)) view_mode <- "variable"
 
-    if (view_mode == "aggregated") {
+    if (view_mode == "variable") {
       blocks <- lapply(scenario_ids, function(sid) {
         sub <- cls[cls$scenario_id == sid, ]
         header_row <- tags$tr(tags$td(colspan = 5,
@@ -2579,7 +2567,7 @@ server <- function(input, output) {
 
       tags$table(class = "table table-bordered table-striped", tags$tbody(blocks))
 
-    } else if (detail_mode == "category") {
+    } else if (view_mode == "category") {
       validate(need(!is.null(active_groupby_column()),
                     "Pick a \"Colour/group samples by\" column above (in the plot section) to see samples grouped by category here."))
       group_levels <- sort(unique(cls$group))
