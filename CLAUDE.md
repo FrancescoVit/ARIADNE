@@ -65,11 +65,11 @@ outputs). These blocks are structurally parallel but not factored into a shared 
 a bug or changing behavior in one taxon's block, check whether the same fix is needed in the other four
 (this is exactly the pattern the "fix biota level filtering" commit addressed).
 
-### `past_release/` vs `next_release/`
+### Releases and `next_release/`
 
-- **`past_release/`** holds frozen, versioned snapshots of previous releases (`global4.0.R`/`server4.0.R`/
-  `ui4.0.R`, `...4.1.R`, etc.) for reference/history. These are not sourced by the live app — do not edit them
-  to fix current bugs.
+- **Past releases** are git tags (`v4.0`, `v4.1`, `v4.1.1`, `4.2`, `4.3`, ...), each created on `main` when
+  `development` is merged for a release. To look at an old version, check out its tag; there is no snapshot
+  folder in the tree.
 - **`next_release/`** (git-ignored, not present in a fresh clone) is the working area where the *next* version
   and its `data_source/` CSVs live locally before being promoted to the repo root. If you find yourself
   needing the raw data files, this is where they'd be placed.

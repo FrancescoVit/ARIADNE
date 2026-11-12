@@ -1,10 +1,11 @@
 # shARed mInotAur Database exploratioN Environment : ARIADNE
-# Version: 4.3
+# Version: 4.4
 # Author:
 # Francesco Vitali §
 # Mocali Stefano §
 # Sara Del Duca §
 # Elena Tondini §
+# Irene Criscuoli ç
 # Vivianne Yayende +
 # Antonio Bispo +
 # Mario Adam +
@@ -15,6 +16,7 @@
 # stefano.mocali@crea.gov.it
 # sara.delduca@crea.gov.it
 # elena.tondini@crea.gov.it
+# irene.criscuoli@crea.gov.it
 # vivianne.koyao-yayende@inrae.fr
 # antonio.bispo@inrae.fr
 # mario.adam@inrae.fr
@@ -22,6 +24,7 @@
 #
 # Author Affiliation:
 # § Research Centre for Agriculture and Environment, Council for Agricultural Research and Economics (CREA-AA)
+# ç Research Centre for Agricultural Policies and Bioeconomy, Council for Agricultural Research and Economics (CREA-PB)
 # + National Research Institute for Agriculture, Food and Environment (INRAE)
 # @ BOKU University (BOKU)
 
@@ -100,27 +103,27 @@ ui <- dashboardPage(
                 box(
                   width = 12,
                   align = "center",
-                  h1("Welcome to ARIADNE version 4.3"),
+                  h1("Welcome to ARIADNE version 4.4"),
                   br(),
                   br(),
-                  h4("Welcome to the shARed mInotAur Database exploratioN Environment, or in short ARIADNE."),
+                  h4("Welcome to the shARed mInotAur Database exploratioN Environment (ARIADNE)."),
                   br(),
-                  h4("This application was developed as part of the actions of MINOTAUR project, under the EJP Soil program. 
-                     The objective of ARIADNE is to provide an easy to use user interface for the exploration of Europena soil 
-                     biodiversity data that were collected and harmonized during the MINOTAUR project"), # maybe not proper as it is using HTML header
+                  h4("This application was developed as part of the MINOTAUR project under the EJP Soil programme.
+                     The objective of ARIADNE is to provide an easy-to-use interface for exploring European soil
+                     biodiversity data collected and harmonised during the MINOTAUR project."), # maybe not proper as it is using HTML header
                   br(),
                   br(),
                   br(),
-                  h4("ARIADNE is organized in the sidebar into two sections: MINOTAUR DATABASE and SOIL MONITORING LAW. Each has its own
-                     Overview module, so check the section header above a menu entry to tell them apart."),
-                  h4("In the MINOTAUR DATABASE section, the Overview module is used to filter the database records on the basis of different metadata (i.e. land use, management,
-                     country, and biota group) and to visualize the number of selected records, their geographical distribution, and their
-                     distribution per Member State. Records that are filtered in the Overview module, are used to display analysis in the Analysis module"),
-                  h4("The Analysis module is used to show the actual analysis on the selected records. Here analysis are organized based on different indices
-                     and on different level of soil biota"),
+                  h4("ARIADNE is organised into two sections in the sidebar: MINOTAUR DATABASE and SOIL MONITORING LAW. Each section has its own
+                     Overview module, so check the section heading above the menu entry to tell them apart."),
+                  h4("In the MINOTAUR DATABASE section, the Overview module is used to filter database records by different metadata (i.e. land use, management,
+                     country and biota group) and to visualise the number of selected records, their geographical distribution and their
+                     distribution by Member State. Records filtered in the Overview module are used for the analyses displayed in the Analysis module."),
+                  h4("The Analysis module displays the analyses performed on the selected records. The analyses are organised according to different indices
+                     and levels of soil biota."),
                   h4("In the SOIL MONITORING LAW section, the Overview module provides background information on the EU Soil Monitoring Law (Directive (EU) 2025/2360) and its Annex I soil
-                     descriptors, together with a summary of existing national legislation touching each descriptor. The Scenario Testing module lets you define and compare different
-                     sets of national thresholds and, optionally, test them against your own uploaded sample data")
+                     descriptors, together with a summary of existing national legislation relating to each descriptor. The Scenario Testing module allows the user to define and compare different
+                     sets of national thresholds and, optionally, test them against their own uploaded sample data.")
                   )
                 ),
               fluidRow(
@@ -778,6 +781,10 @@ ui <- dashboardPage(
                         p(em("Optional. Upload a CSV of your own samples to plot them as points against the
                               scenarios above. The file is only held in your browser session - it is never
                               written to disk or shared, and disappears when the session ends.")),
+                        p(strong("The file must follow the template: every template column (sample_id and all
+                                  the SML variables) must be present, with exactly the same name, even for
+                                  variables you have no data for - in that case just leave the column empty.
+                                  Files missing any template column are not loaded.")),
                         p(em("You can add your own extra columns (land use, treatment, site, ...) beyond the
                               SML variables - any categorical one becomes available below as a way to
                               colour/group the samples in the plot.")),
@@ -816,7 +823,10 @@ ui <- dashboardPage(
                         ),
                         conditionalPanel(
                             condition = "input.scenario_plot_type == 'histogram' || input.scenario_plot_type == 'violin'",
-                            p(em("Dashed lines mark each scenario's threshold (same colors as its legend)."))
+                            p(em("Dashed lines mark each scenario's threshold (same colors as its legend). The
+                                  shaded area in the same colour is the healthy side of that threshold: below it
+                                  for some variables, above it for others. Where scenarios overlap the shading
+                                  gets darker."))
                         ),
                         plotOutput("scenario_radar_plot", height = "600px")
                     )
@@ -827,30 +837,37 @@ ui <- dashboardPage(
                         title = "Sample classification per scenario",
                         status = "primary", solidHeader = TRUE, collapsible = TRUE,
                         radioButtons("sample_table_view_mode", label = NULL,
-                                     choices = c("Aggregated" = "aggregated", "Detailed" = "detailed"),
-                                     selected = "aggregated", inline = TRUE),
+                                     choices = c("Per variable" = "variable", "Per sample" = "sample",
+                                                 "Per category" = "category"),
+                                     selected = "variable", inline = TRUE),
                         conditionalPanel(
-                            condition = "input.sample_table_view_mode == 'aggregated' || input.sample_table_view_mode == null",
+                            condition = "input.sample_table_view_mode == 'variable' || input.sample_table_view_mode == null",
                             p(em("Per scenario, per variable: how many uploaded samples meet that variable's
                                   threshold (green), fail it (red), or can't be evaluated (grey) - plus the
                                   totals and overall % healthy (undetermined samples excluded from that %)."),
                               em(" This pools every uploaded sample together, regardless of any category you
-                                  may have picked below for the plots - switch to Detailed to see it broken
+                                  may have picked above for the plots - switch to Per category to see it broken
                                   down by category."))
                         ),
                         conditionalPanel(
-                            condition = "input.sample_table_view_mode == 'detailed'",
-                            uiOutput("sample_table_detail_mode_selector"),
-                            p(em("Per sample: for each uploaded sample and each scenario, green = meets that
+                            condition = "input.sample_table_view_mode == 'sample'",
+                            p(em("For each uploaded sample and each scenario, green = meets that
                                   variable's threshold, red = fails it, grey = variable not available for that
                                   sample. The last column counts healthy/unhealthy/undetermined variables for
-                                  that sample under that scenario.")),
-                            p(em("Per category (only offered once a \"Colour/group samples by\" column is picked
-                                  below): for each category and each scenario, how many samples in that category
-                                  meet each variable's threshold, shown as healthy/total, with any undetermined
-                                  samples noted alongside rather than counted either way. The last column gives
-                                  the same tally across all variables for that category, with healthy, unhealthy
-                                  and total each coloured separately."))
+                                  that sample under that scenario."))
+                        ),
+                        conditionalPanel(
+                            condition = "input.sample_table_view_mode == 'category'",
+                            p(em("Needs a \"Colour/group samples by\" column picked above. For each category and each scenario, how many samples in that category
+                                  meet each variable's threshold, shown as healthy/total; where some samples fail, the red line
+                                  below the count gives how far, on average, the unhealthy samples are beyond the
+                                  threshold, in % of the threshold (computed per unhealthy sample as |value - threshold| / threshold
+                                  x 100, then averaged over the unhealthy samples of that category; min-max in brackets), with any undetermined
+                                  samples noted alongside rather than counted either way. The last column shows
+                                  how the category's samples split by number of failed variables (0, 1, 2, 3 or
+                                  more; n/d = no variable could be evaluated for that sample), with the number of
+                                  samples in each segment - the more green and yellow, the closer the category is
+                                  to meeting the scenario."))
                         ),
                         uiOutput("sample_classification_table")
                     )

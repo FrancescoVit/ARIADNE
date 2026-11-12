@@ -1,0 +1,16 @@
+sample_id,soc_clay,bulk_density,phosphorus,land_use
+Grassland1,0.095,1.35,22,Grassland
+Grassland2,0.088,1.4,28,Grassland
+Grassland3,0.1,1.3,18,Grassland
+Grassland4,0.08,1.45,35,Grassland
+Grassland5,0.09,1.33,20,Grassland
+Arable1,0.06,1.62,38,Arable
+Arable2,0.05,1.68,42,Arable
+Arable3,0.065,1.58,35,Arable
+Arable4,0.045,1.72,48,Arable
+Arable5,0.058,1.6,40,Arable
+Forest1,0.11,1.28,15,Forest
+Forest2,0.12,1.22,12,Forest
+Forest3,0.105,1.3,17,Forest
+Forest4,0.13,1.18,10,Forest
+Forest5,0.115,1.26,14,Forest

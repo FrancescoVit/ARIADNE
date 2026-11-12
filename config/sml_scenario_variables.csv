@@ -23,13 +23,29 @@
 #                    widened 0->1 to 0->10 on 2026-10-14 after finding real MINOTAUR sites (low-clay
 #                    sandy/silty soils with moderate organic matter) with a genuine ratio up to ~5.2 -
 #                    the original 0-1 draft range was simply too narrow, not a sign of bad data.
-id,label,unit,part,direction,fixed_value,minotaur_column,plausible_min,plausible_max
-ec,Electrical conductivity,dS/m,A,below,4,,0,20
-soc_clay,SOC/clay ratio,ratio,A,above,0.0769230769,,0,10
-bulk_density,Bulk density (subsoil),g/cm3,A,below,1.80,bulk_density,0.5,2.2
-phosphorus,Extractable phosphorus,mg/kg,B,below,,phosphorus_available,0,500
-erosion,Soil erosion rate,t/ha/yr,B,below,,,0,50
-water_holding,Water holding capacity,%,B,above,,,0,100
-ksat,Saturated hydraulic conductivity,cm/day,B,above,,,0,500
-air_capacity,Air capacity,%,B,above,,,0,100
-soc_stock,SOC stock,tC/ha,B,above,,,0,300
+#   envo_iri/agrovoc_iri - ontology term mapping for this variable's `id`, so it's traceable to a
+#                    standard vocabulary instead of an invented name (ENVO: purl.obolibrary.org/obo,
+#                    AGROVOC: FAO's agricultural thesaurus, aims.fao.org/aos/agrovoc). Looked up
+#                    2026-10-19 against the live OLS/EBI and AGROVOC REST APIs, not guessed - left
+#                    BLANK wherever no real matching term was found, rather than forcing a loose fit.
+#                    Several are approximate even where filled in - erosion maps to the ENVO/AGROVOC
+#                    *process* "soil erosion", not a *rate* quantity; bulk_density's AGROVOC term is
+#                    generic "soil density" (no "bulk" qualifier); ksat's AGROVOC term is generic
+#                    "hydraulic conductivity" (no "saturated" qualifier); air_capacity's AGROVOC term
+#                    is the broader concept "aeration". soc_clay is a ratio with no single term in
+#                    either vocabulary - its two components do exist (AGROVOC "soil organic carbon"
+#                    aims.fao.org/aos/agrovoc/c_389fe908, AGROVOC "clay" aims.fao.org/aos/agrovoc/c_15619,
+#                    neither has an ENVO match either) but aren't recorded as this row's IRI since
+#                    neither one alone *is* soc_clay. soc_stock has no match in either vocabulary
+#                    (AGROVOC "carbon sequestration", c_331583, is a process, not a stock quantity -
+#                    deliberately not used here).
+id,label,unit,part,direction,fixed_value,minotaur_column,plausible_min,plausible_max,envo_iri,agrovoc_iri
+ec,Electrical conductivity,dS/m,A,below,4,,0,20,,http://aims.fao.org/aos/agrovoc/c_24022
+soc_clay,SOC/clay ratio,ratio,A,above,0.0769230769,,0,10,,
+bulk_density,Bulk density (subsoil),g/cm3,A,below,1.80,bulk_density,0.5,2.2,http://purl.obolibrary.org/obo/ENVO_00010005,http://aims.fao.org/aos/agrovoc/c_7167
+phosphorus,Extractable phosphorus,mg/kg,B,below,,phosphorus_available,0,500,,http://aims.fao.org/aos/agrovoc/c_5804
+erosion,Soil erosion rate,t/ha/yr,B,below,,,0,50,http://purl.obolibrary.org/obo/ENVO_01000706,http://aims.fao.org/aos/agrovoc/c_2651
+water_holding,Water holding capacity,%,B,above,,,0,100,http://purl.obolibrary.org/obo/ENVO_06105304,http://aims.fao.org/aos/agrovoc/c_25304
+ksat,Saturated hydraulic conductivity,cm/day,B,above,,,0,500,,http://aims.fao.org/aos/agrovoc/c_25579
+air_capacity,Air capacity,%,B,above,,,0,100,,http://aims.fao.org/aos/agrovoc/c_154
+soc_stock,SOC stock,tC/ha,B,above,,,0,300,,

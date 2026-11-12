@@ -1,10 +1,11 @@
 # shARed mInotAur Database exploratioN Environment : ARIADNE
-# Version: 4.3
+# Version: 4.4
 # Author:
 # Francesco Vitali §
 # Mocali Stefano §
 # Sara Del Duca §
 # Elena Tondini §
+# Irene Criscuoli ç
 # Vivianne Yayende +
 # Antonio Bispo +
 # Mario Adam +
@@ -15,6 +16,7 @@
 # stefano.mocali@crea.gov.it
 # sara.delduca@crea.gov.it
 # elena.tondini@crea.gov.it
+# irene.criscuoli@crea.gov.it
 # vivianne.koyao-yayende@inrae.fr
 # antonio.bispo@inrae.fr
 # mario.adam@inrae.fr
@@ -22,6 +24,7 @@
 #
 # Author Affiliation:
 # § Research Centre for Agriculture and Environment, Council for Agricultural Research and Economics (CREA-AA)
+# ç Research Centre for Agricultural Policies and Bioeconomy, Council for Agricultural Research and Economics (CREA-PB)
 # + National Research Institute for Agriculture, Food and Environment (INRAE)
 # @ BOKU University (BOKU)
 
@@ -39,7 +42,7 @@ server <- function(input, output) {
     tags$div(
       style = "text-align:center;",
       tags$img(
-        src = "https://raw.githubusercontent.com/FrancescoVit/ARIADNE/main/src/MINOTAUR_Logo_PNG.png",
+        src = "MINOTAUR_Logo_PNG.png",
         style = "max-width:100%; height:auto;"
       )
     )
@@ -1778,10 +1781,34 @@ server <- function(input, output) {
       return(minotaur_samples_for_sml())
     }
     if (is.null(input$sample_upload)) return(NULL)
+    # A file that doesn't follow the template is rejected outright (treated as
+    # no data), with a message asking to use the template - see
+    # upload_template_problem(). Deliberately no column mapping/guessing: the
+    # template is the contract, and silently matching "EC" to "ec" or "P" to
+    # "phosphorus" would hide unit and meaning mismatches.
+    if (!is.null(upload_template_problem())) return(NULL)
+    raw_upload()
+  })
+
+  raw_upload <- reactive({
+    if (is.null(input$sample_upload)) return(NULL)
     tryCatch(
       utils::read.csv(input$sample_upload$datapath, stringsAsFactors = FALSE),
       error = function(e) NULL
     )
+  })
+
+  # Template columns an uploaded file must have, with exactly these names (values
+  # may be left empty). NULL when the file is fine (or nothing is uploaded), else
+  # a list describing what's wrong, used for the rejection message.
+  template_required_columns <- c("sample_id", sml_scenario_variables$id)
+  upload_template_problem <- reactive({
+    if (is.null(input$sample_upload)) return(NULL)
+    df <- raw_upload()
+    if (is.null(df)) return(list(unreadable = TRUE, missing = character(0)))
+    missing <- setdiff(template_required_columns, colnames(df))
+    if (length(missing) == 0) return(NULL)
+    list(unreadable = FALSE, missing = missing)
   })
 
   n_uploaded <- reactive({
@@ -1869,6 +1896,8 @@ server <- function(input, output) {
       "No sample data loaded - upload a CSV or use the current MINOTAUR selection to see this view."
     } else if (identical(rv_sml_source$mode, "minotaur")) {
       "No MINOTAUR samples match the current Overview filters - adjust them, or upload a CSV instead."
+    } else if (!is.null(upload_template_problem())) {
+      "The uploaded file doesn't follow the CSV template - see the message in the upload box above."
     } else {
       "Upload a CSV to see this view."
     }
@@ -1911,7 +1940,7 @@ server <- function(input, output) {
           if (is.null(tv)) NA_real_ else as.numeric(tv)
         }
         data.frame(variable = v$label, scenario = current_scenario_name(s),
-                   color = s$color, thr = thr, stringsAsFactors = FALSE)
+                   color = s$color, thr = thr, direction = v$direction, stringsAsFactors = FALSE)
       }))
     })
     out <- do.call(rbind, rows)
@@ -1966,9 +1995,20 @@ server <- function(input, output) {
         } else {
           ifelse(is.na(val), "undetermined", ifelse(val >= thr, "healthy", "unhealthy"))
         }
+        # Relative distance from the threshold in %, signed so that positive always
+        # means "on the unhealthy side" whatever the direction (below: value above
+        # thr; above: value below thr). NA when not evaluable or when thr is 0
+        # (relative distance undefined - possible for user-entered Part B values).
+        deviation_pct <- if (is.na(thr) || thr == 0) {
+          rep(NA_real_, nrow(df))
+        } else if (v$direction == "below") {
+          100 * (val - thr) / abs(thr)
+        } else {
+          100 * (thr - val) / abs(thr)
+        }
         data.frame(scenario_id = s$id, scenario_name = current_scenario_name(s), scenario_color = s$color,
                    sample_id = sample_ids, group = group_vals, variable_id = v$id, variable_label = v$label,
-                   status = status, stringsAsFactors = FALSE)
+                   status = status, deviation_pct = deviation_pct, stringsAsFactors = FALSE)
       }))
     })
     do.call(rbind, rows)
@@ -1985,6 +2025,20 @@ server <- function(input, output) {
       p(style = "color:#1565c0; font-weight:bold;",
         icon("database"),
         sprintf(" Using %d MINOTAUR sampling point(s) from the current Overview selection.", n))
+    } else if (!is.null(problem <- upload_template_problem())) {
+      tags$div(
+        style = "border:1px solid #c62828; background-color:#ffebee; border-radius:4px; padding:10px 14px;",
+        p(style = "color:#c62828; font-weight:bold; margin-bottom:6px;", icon("triangle-exclamation"),
+          if (problem$unreadable) " The uploaded file could not be read as a CSV."
+          else " The uploaded file doesn't follow the CSV template, so it was not loaded."),
+        if (!problem$unreadable) p(
+          "Missing column(s), named exactly as in the template: ",
+          tags$code(paste(problem$missing, collapse = ", ")), "."),
+        p("Please download the template, copy your data into it keeping its column names
+           (empty values are fine, and you can add your own extra columns for grouping), then upload it again."),
+        tags$a(href = "sml_scenario_template.csv", download = NA, class = "btn btn-danger",
+               icon("download"), " Download CSV template")
+      )
     } else if (!is.null(input$sample_upload)) {
       p(style = "color:#555;", icon("file-csv"),
         sprintf(" Using %d sample(s) from your uploaded CSV.", n))
@@ -2136,16 +2190,68 @@ server <- function(input, output) {
       # plain solid line in the legend only.
       scenario_guide <- guide_legend(override.aes = list(linetype = 1))
 
+      # Shaded "healthy side" of each scenario's threshold, in the scenario's
+      # colour: the plots use each variable's raw scale, so for some variables
+      # healthy is below the line and for others above it - the dashed line alone
+      # didn't say which. One layer per scenario with a fixed (non-mapped) fill,
+      # because the fill scale is already taken by the metadata grouping. Drawn
+      # before the data so bars/violins sit on top; where scenarios overlap the
+      # shading simply gets darker.
+      thr_shade <- thr[!is.na(thr$thr), ]
+      thr_shade$lo <- ifelse(thr_shade$direction == "below", -Inf, thr_shade$thr)
+      thr_shade$hi <- ifelse(thr_shade$direction == "below", thr_shade$thr, Inf)
+      healthy_shading <- function(axis) {
+        lapply(unique(thr_shade$scenario), function(sc) {
+          d <- thr_shade[thr_shade$scenario == sc, ]
+          if (axis == "x") {
+            geom_rect(data = d, aes(xmin = lo, xmax = hi), ymin = -Inf, ymax = Inf,
+                      fill = d$color[1], alpha = 0.12, inherit.aes = FALSE)
+          } else {
+            geom_rect(data = d, aes(ymin = lo, ymax = hi), xmin = -Inf, xmax = Inf,
+                      fill = d$color[1], alpha = 0.12, inherit.aes = FALSE)
+          }
+        })
+      }
+
       if (plot_type == "histogram") {
+        # Individual samples as points in a strip just below the bars (like the
+        # jittered points on the violin), so the single values are always
+        # visible, not only the binned counts. The strip's height is relative to
+        # the tallest bar (approximated with 15 equal bins per variable, same as
+        # the histogram), so it stays proportionate from a handful of uploaded
+        # samples to thousands of MINOTAUR ones; the y axis only labels counts
+        # >= 0, the strip below 0 carries no count.
+        max_count <- max(1, unlist(lapply(split(vals$value, vals$variable, drop = TRUE), function(x) {
+          x <- x[!is.na(x)]
+          if (length(x) == 0) return(0)
+          if (length(unique(x)) == 1) return(length(x))
+          max(table(cut(x, breaks = 15)))
+        })))
+        strip_y <- -0.08 * max_count
+        n_points <- sum(!is.na(vals$value))
+        point_alpha <- if (n_points > 500) 0.25 else 0.7
+        sample_points <- if (!grouped) {
+          geom_jitter(aes(y = strip_y), width = 0, height = 0.025 * max_count, shape = 21,
+                      fill = "#2C7FB8", color = "gray20", size = 1.6, alpha = point_alpha, na.rm = TRUE)
+        } else {
+          geom_jitter(aes(y = strip_y, fill = group), width = 0, height = 0.025 * max_count, shape = 21,
+                      color = "gray20", size = 1.6, alpha = point_alpha, na.rm = TRUE, show.legend = FALSE)
+        }
         p <- if (!grouped) {
           ggplot(vals, aes(x = value)) +
+            healthy_shading("x") +
             geom_histogram(bins = 15, fill = "#2C7FB8", alpha = 0.7, color = "gray20", na.rm = TRUE)
         } else {
           ggplot(vals, aes(x = value, fill = group)) +
+            healthy_shading("x") +
             geom_histogram(bins = 15, alpha = 0.6, color = "gray20", position = "identity", na.rm = TRUE) +
             scale_fill_manual(values = group_colors)
         }
-        p +
+        p + sample_points +
+          scale_y_continuous(breaks = function(lims) {
+            b <- pretty(c(0, lims[2]))
+            b[b >= 0 & b == round(b)]
+          }) +
           geom_vline(data = thr, aes(xintercept = thr, color = scenario),
                      linetype = "dashed", linewidth = 0.8, na.rm = TRUE) +
           scale_color_manual(values = color_vec, guide = scenario_guide) +
@@ -2156,9 +2262,11 @@ server <- function(input, output) {
       } else {
         p <- if (!grouped) {
           ggplot(vals, aes(x = 1, y = value)) +
+            healthy_shading("y") +
             geom_violin(fill = "#2C7FB8", alpha = 0.5, color = "gray20", trim = FALSE, na.rm = TRUE)
         } else {
           ggplot(vals, aes(x = group, y = value, fill = group)) +
+            healthy_shading("y") +
             geom_violin(alpha = 0.5, color = "gray20", trim = FALSE, na.rm = TRUE) +
             scale_fill_manual(values = group_colors)
         }
@@ -2337,19 +2445,6 @@ server <- function(input, output) {
     }
   })
 
-  # Shown only inside the Detailed view, and only offers "Per category" once a
-  # group-by column is actually selected above (in the plot section) - reuses
-  # that same choice rather than asking the user to pick a column twice.
-  output$sample_table_detail_mode_selector <- renderUI({
-    if (!identical(input$sample_table_view_mode, "detailed")) return(NULL)
-    if (is.null(active_groupby_column())) return(NULL)
-    current <- isolate(input$sample_table_detail_mode)
-    choices <- c("Per sample" = "sample", "Per category" = "category")
-    selected <- if (!is.null(current) && current %in% choices) current else "sample"
-    radioButtons("sample_table_detail_mode", label = NULL, choices = choices,
-                 selected = selected, inline = TRUE)
-  })
-
   output$sample_classification_table <- renderUI({
     cls <- sample_classification()
     all_vars <- sml_scenario_variables
@@ -2366,7 +2461,7 @@ server <- function(input, output) {
     }
 
     # Per-variable cells: plain "Healthy/Total" (Total = healthy + unhealthy, same
-    # denominator convention as the Aggregated view's % Healthy), in normal black -
+    # denominator convention as the Per variable view's % Healthy), in normal black -
     # a whole table of green numbers reads as "all healthy" at a glance, which
     # isn't the point here. Undetermined is still noted, never silently dropped,
     # since the single-sample view always shows a "–" for it too.
@@ -2376,40 +2471,89 @@ server <- function(input, output) {
       undetermined <- sum(sub$status == "undetermined")
       total <- healthy + unhealthy
       main <- if (total > 0) sprintf("%d/%d", healthy, total) else "–"
+      # Second line under the count: mean % distance beyond the threshold of the
+      # UNHEALTHY samples only (with range) - how far, on average, the failing
+      # samples are from passing. Healthy samples are left out on purpose
+      # (counting them as 0 would mix "how many fail" with "how badly"; the count
+      # is already the cell's own number). Nothing shown when none fail.
+      dev_line <- NULL
+      if (unhealthy > 0) {
+        dev <- sub$deviation_pct[sub$status == "unhealthy"]
+        dev <- dev[!is.na(dev)]
+        dev_text <- if (length(dev) == 0) {
+          "% off: n/a (threshold 0)"
+        } else if (length(dev) == 1) {
+          sprintf("%.0f%% off", dev)
+        } else {
+          sprintf("avg %.0f%% off (%.0f-%.0f%%)", mean(dev), min(dev), max(dev))
+        }
+        dev_line <- tags$div(style = "color:#c62828; font-size:0.8em; white-space:nowrap;", dev_text)
+      }
       tagList(
         tags$span(main),
-        if (undetermined > 0) tags$span(style = "color:#9e9e9e; font-size:0.85em;", sprintf(" (%d n/d)", undetermined)) else NULL
+        if (undetermined > 0) tags$span(style = "color:#9e9e9e; font-size:0.85em;", sprintf(" (%d n/d)", undetermined)) else NULL,
+        dev_line
       )
     }
 
-    # Row-end summary cell only: healthy/unhealthy/total, each coloured (green/
-    # red/black) - this one column is meant to be read as a quick health
-    # snapshot for the category, unlike the plain per-variable cells above.
-    fmt_count_cell_total <- function(sub) {
-      healthy <- sum(sub$status == "healthy")
-      unhealthy <- sum(sub$status == "unhealthy")
-      undetermined <- sum(sub$status == "undetermined")
-      total <- healthy + unhealthy
+    # Row-end summary cell only: how the category's SAMPLES split by number of
+    # failed variables (0 / 1 / 2 / 3+), drawn as one stacked bar with the
+    # sample count inside each segment. Replaces a count of sample x variable
+    # pairs, which mixed "how many samples" with "how many variables". A plain
+    # healthy/unhealthy verdict per sample was tried and rejected: one failed
+    # variable is enough to make a sample unhealthy, so nearly every category
+    # read 0 healthy and a category one variable away from the target looked
+    # the same as one failing everywhere. Samples with no evaluable variable at
+    # all get their own grey segment rather than counting as "0 failed".
+    failed_vars_classes <- data.frame(
+      label = c("0", "1", "2", "3+", "n/d"),
+      color = c("#2e7d32", "#f9a825", "#ef6c00", "#c62828", "#bdbdbd"),
+      text  = c("#ffffff", "#000000", "#ffffff", "#ffffff", "#000000"),
+      stringsAsFactors = FALSE
+    )
+    fmt_failed_vars_bar <- function(sub) {
+      n_failed <- tapply(sub$status == "unhealthy", sub$sample_id, sum)
+      n_evaluated <- tapply(sub$status != "undetermined", sub$sample_id, sum)
+      cls_label <- ifelse(n_evaluated == 0, "n/d",
+                   ifelse(n_failed >= 3, "3+", as.character(n_failed)))
+      counts <- table(factor(cls_label, levels = failed_vars_classes$label))
+      n_samples <- length(cls_label)
+      segments <- lapply(seq_len(nrow(failed_vars_classes)), function(i) {
+        k <- counts[[i]]
+        if (k == 0) return(NULL)
+        tags$div(
+          title = sprintf("%d sample(s) with %s failed variable(s)", k, failed_vars_classes$label[i]),
+          style = sprintf("flex:%d; background-color:%s; color:%s; text-align:center; font-size:0.85em; font-weight:bold; line-height:20px; min-width:18px;",
+                          k, failed_vars_classes$color[i], failed_vars_classes$text[i]),
+          k
+        )
+      })
       tagList(
-        tags$span(style = "color:#2e7d32; font-weight:bold;", healthy),
-        " / ",
-        tags$span(style = "color:#c62828; font-weight:bold;", unhealthy),
-        " / ",
-        tags$span(style = "font-weight:bold;", total),
-        if (undetermined > 0) tags$span(style = "color:#9e9e9e; font-size:0.85em;", sprintf(" (%d n/d)", undetermined)) else NULL
+        tags$div(style = "display:flex; width:100%; min-width:140px; border-radius:3px; overflow:hidden;", segments),
+        tags$div(style = "color:#555; font-size:0.8em; margin-top:2px;", sprintf("%d sample(s)", n_samples))
       )
     }
+    failed_vars_legend <- tags$div(
+      style = "font-size:0.8em; font-weight:normal; margin-top:4px;",
+      lapply(seq_len(nrow(failed_vars_classes)), function(i) {
+        tags$span(style = "margin-right:6px; white-space:nowrap;",
+          tags$span(style = sprintf("display:inline-block; width:10px; height:10px; background-color:%s; margin-right:2px;",
+                                    failed_vars_classes$color[i])),
+          failed_vars_classes$label[i])
+      })
+    )
 
+    # One flat selector: Per variable (all samples pooled) / Per sample / Per
+    # category. "Per category" is always offered; without a group-by column it
+    # shows a hint (validate below) instead of being hidden.
     view_mode <- input$sample_table_view_mode
-    if (is.null(view_mode)) view_mode <- "aggregated"
-    detail_mode <- input$sample_table_detail_mode
-    if (is.null(detail_mode)) detail_mode <- "sample"
+    if (is.null(view_mode)) view_mode <- "variable"
 
-    if (view_mode == "aggregated") {
+    if (view_mode == "variable") {
       blocks <- lapply(scenario_ids, function(sid) {
         sub <- cls[cls$scenario_id == sid, ]
         header_row <- tags$tr(tags$td(colspan = 5,
-          style = sprintf("background-color:%s; color:#ffffff; font-weight:bold; padding:8px;", sub$scenario_color[1]),
+          style = sprintf("background-color:%s; color:#ffffff; font-weight:bold; padding:8px; border:2px solid #333333;", sub$scenario_color[1]),
           sub$scenario_name[1]))
         var_header <- tags$tr(tags$th("Variable"), tags$th("Healthy"), tags$th("Unhealthy"),
                                tags$th("Undetermined"), tags$th("% Healthy"))
@@ -2453,19 +2597,19 @@ server <- function(input, output) {
 
       tags$table(class = "table table-bordered table-striped", tags$tbody(blocks))
 
-    } else if (detail_mode == "category") {
+    } else if (view_mode == "category") {
       validate(need(!is.null(active_groupby_column()),
                     "Pick a \"Colour/group samples by\" column above (in the plot section) to see samples grouped by category here."))
       group_levels <- sort(unique(cls$group))
       blocks <- lapply(scenario_ids, function(sid) {
         sub <- cls[cls$scenario_id == sid, ]
         header_row <- tags$tr(tags$td(colspan = nrow(all_vars) + 2,
-          style = sprintf("background-color:%s; color:#ffffff; font-weight:bold; padding:8px;", sub$scenario_color[1]),
+          style = sprintf("background-color:%s; color:#ffffff; font-weight:bold; padding:8px; border:2px solid #333333;", sub$scenario_color[1]),
           sub$scenario_name[1]))
         var_header <- tags$tr(
           tags$th("Category"),
           lapply(seq_len(nrow(all_vars)), function(i) tags$th(all_vars$label[i])),
-          tags$th("Healthy / Unhealthy / Total (all variables)")
+          tags$th("Samples by number of failed variables", failed_vars_legend)
         )
         body_rows <- lapply(group_levels, function(grp) {
           sub_g <- sub[sub$group == grp, ]
@@ -2473,7 +2617,7 @@ server <- function(input, output) {
             sub_v <- sub_g[sub_g$variable_id == all_vars$id[i], ]
             tags$td(align = "center", fmt_count_cell(sub_v))
           })
-          tags$tr(tags$td(grp), cells, tags$td(align = "center", fmt_count_cell_total(sub_g)))
+          tags$tr(tags$td(grp), cells, tags$td(fmt_failed_vars_bar(sub_g)))
         })
         tagList(header_row, var_header, body_rows)
       })
@@ -2485,7 +2629,7 @@ server <- function(input, output) {
       blocks <- lapply(scenario_ids, function(sid) {
         sub <- cls[cls$scenario_id == sid, ]
         header_row <- tags$tr(tags$td(colspan = nrow(all_vars) + 2,
-          style = sprintf("background-color:%s; color:#ffffff; font-weight:bold; padding:8px;", sub$scenario_color[1]),
+          style = sprintf("background-color:%s; color:#ffffff; font-weight:bold; padding:8px; border:2px solid #333333;", sub$scenario_color[1]),
           sub$scenario_name[1]))
         var_header <- tags$tr(
           tags$th("Sample"),
