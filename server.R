@@ -1995,9 +1995,20 @@ server <- function(input, output) {
         } else {
           ifelse(is.na(val), "undetermined", ifelse(val >= thr, "healthy", "unhealthy"))
         }
+        # Relative distance from the threshold in %, signed so that positive always
+        # means "on the unhealthy side" whatever the direction (below: value above
+        # thr; above: value below thr). NA when not evaluable or when thr is 0
+        # (relative distance undefined - possible for user-entered Part B values).
+        deviation_pct <- if (is.na(thr) || thr == 0) {
+          rep(NA_real_, nrow(df))
+        } else if (v$direction == "below") {
+          100 * (val - thr) / abs(thr)
+        } else {
+          100 * (thr - val) / abs(thr)
+        }
         data.frame(scenario_id = s$id, scenario_name = current_scenario_name(s), scenario_color = s$color,
                    sample_id = sample_ids, group = group_vals, variable_id = v$id, variable_label = v$label,
-                   status = status, stringsAsFactors = FALSE)
+                   status = status, deviation_pct = deviation_pct, stringsAsFactors = FALSE)
       }))
     })
     do.call(rbind, rows)
@@ -2460,8 +2471,30 @@ server <- function(input, output) {
       undetermined <- sum(sub$status == "undetermined")
       total <- healthy + unhealthy
       main <- if (total > 0) sprintf("%d/%d", healthy, total) else "–"
+      # Hover tooltip: mean % distance beyond the threshold of the UNHEALTHY samples
+      # only - how far, on average, the failing samples are from passing. Healthy
+      # samples are left out on purpose (counting them as 0 would mix "how many
+      # fail" with "how badly"; the count is already the cell's own number).
+      tip <- NULL
+      if (unhealthy > 0) {
+        dev <- sub$deviation_pct[sub$status == "unhealthy"]
+        dev <- dev[!is.na(dev)]
+        tip <- if (length(dev) > 0) {
+          sprintf("Unhealthy samples (%d): on average %.0f%% beyond the threshold (range %.0f%% to %.0f%%)",
+                  unhealthy, mean(dev), min(dev), max(dev))
+        } else {
+          sprintf("Unhealthy samples (%d): %% distance not computable (threshold is 0)", unhealthy)
+        }
+      } else if (total > 0) {
+        tip <- "All evaluated samples meet the threshold"
+      }
+      main_tag <- if (!is.null(tip)) {
+        tags$span(title = tip, style = "cursor:help; border-bottom:1px dotted #777;", main)
+      } else {
+        tags$span(main)
+      }
       tagList(
-        tags$span(main),
+        main_tag,
         if (undetermined > 0) tags$span(style = "color:#9e9e9e; font-size:0.85em;", sprintf(" (%d n/d)", undetermined)) else NULL
       )
     }
