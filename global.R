@@ -39,16 +39,28 @@ packages <- c("shiny", "shinydashboard", "tidyverse", "plotly", "rstatix", "maps
 
 missing <- setdiff(packages, rownames(installed.packages()))
 if (length(missing) > 0) {
-  install.packages(missing)
+  install.packages(missing, repos = "https://cloud.r-project.org")
 }
 
-lapply(packages, library, character.only = TRUE)
+# One explicit library() call per package (same order as `packages`), NOT a loop
+# like lapply(packages, library, character.only = TRUE): rsconnect only detects
+# dependencies written out like this, and with the loop the 4.4 deploy left
+# shinydashboard/tidyverse/plotly/rstatix/maps/shinythemes out of the bundle, so
+# the app failed to start on shinyapps.io. Keep this list in sync with `packages`.
+library(shiny)
+library(shinydashboard)
+library(tidyverse)
+library(plotly)
+library(rstatix)
+library(maps)
+library(shinythemes)
+library(ggnewscale)
 
 # coin is required by rstatix::wilcox_effsize() but must NOT be attached with
 # library(): it defines its own wilcox_test() that would mask rstatix::wilcox_test()
 # used throughout server.R. Install only; rstatix calls coin:: internally.
 if (!requireNamespace("coin", quietly = TRUE)) {
-  install.packages("coin")
+  install.packages("coin", repos = "https://cloud.r-project.org")
 }
 
 
