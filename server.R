@@ -2471,31 +2471,28 @@ server <- function(input, output) {
       undetermined <- sum(sub$status == "undetermined")
       total <- healthy + unhealthy
       main <- if (total > 0) sprintf("%d/%d", healthy, total) else "–"
-      # Hover tooltip: mean % distance beyond the threshold of the UNHEALTHY samples
-      # only - how far, on average, the failing samples are from passing. Healthy
-      # samples are left out on purpose (counting them as 0 would mix "how many
-      # fail" with "how badly"; the count is already the cell's own number).
-      tip <- NULL
+      # Second line under the count: mean % distance beyond the threshold of the
+      # UNHEALTHY samples only (with range) - how far, on average, the failing
+      # samples are from passing. Healthy samples are left out on purpose
+      # (counting them as 0 would mix "how many fail" with "how badly"; the count
+      # is already the cell's own number). Nothing shown when none fail.
+      dev_line <- NULL
       if (unhealthy > 0) {
         dev <- sub$deviation_pct[sub$status == "unhealthy"]
         dev <- dev[!is.na(dev)]
-        tip <- if (length(dev) > 0) {
-          sprintf("Unhealthy samples (%d): on average %.0f%% beyond the threshold (range %.0f%% to %.0f%%)",
-                  unhealthy, mean(dev), min(dev), max(dev))
+        dev_text <- if (length(dev) == 0) {
+          "% off: n/a (threshold 0)"
+        } else if (length(dev) == 1) {
+          sprintf("%.0f%% off", dev)
         } else {
-          sprintf("Unhealthy samples (%d): %% distance not computable (threshold is 0)", unhealthy)
+          sprintf("avg %.0f%% off (%.0f-%.0f%%)", mean(dev), min(dev), max(dev))
         }
-      } else if (total > 0) {
-        tip <- "All evaluated samples meet the threshold"
-      }
-      main_tag <- if (!is.null(tip)) {
-        tags$span(title = tip, style = "cursor:help; border-bottom:1px dotted #777;", main)
-      } else {
-        tags$span(main)
+        dev_line <- tags$div(style = "color:#c62828; font-size:0.8em; white-space:nowrap;", dev_text)
       }
       tagList(
-        main_tag,
-        if (undetermined > 0) tags$span(style = "color:#9e9e9e; font-size:0.85em;", sprintf(" (%d n/d)", undetermined)) else NULL
+        tags$span(main),
+        if (undetermined > 0) tags$span(style = "color:#9e9e9e; font-size:0.85em;", sprintf(" (%d n/d)", undetermined)) else NULL,
+        dev_line
       )
     }
 
