@@ -1,9 +1,3 @@
-# Draft dataset - AI-assisted legislative scan, run 2026-09-29/10-02, UNVERIFIED pending human check.
-# One row per (SML Annex I Part A/B variable x Member State x legislative finding).
-# status: found = official source fetched and read; uncertain = candidate found but not fully verified.
-# Deliberately excludes numeric thresholds - the legislative landscape is too heterogeneous
-# (different units, extraction methods and quantities) to present as comparable numbers yet.
-# source_link may be empty where no official link was retrieved.
 variable_id,country,status,instrument,legal_category,source_link
 ec,Austria,found,"Deponieverordnung 2008 (DVO 2008), Anhang 1",Waste / landfill law,https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=Bundesnormen&Gesetzesnummer=20005653
 ec,Germany,found,"Ersatzbaustoffverordnung (Mantelverordnung 2021), Anlage 1",Waste / secondary construction material law,https://www.gesetze-im-internet.de/ersatzbaustoffv/BJNR259810021.html

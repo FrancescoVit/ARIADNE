@@ -197,23 +197,25 @@ common_vars <- c(
 # config/sml_scenario_variables.csv rather than hardcoded here so it can be reviewed/updated
 # (e.g. by colleagues, in Excel) without touching app code. Both the input UI and the radar
 # plot read from this table, so adding a future axis is a matter of adding one row to the CSV.
-# See the CSV's own header comment for column meanings.
+# Column meanings are in config/README.md: the CSVs themselves hold only header + data rows (no
+# "#" comment lines, which spreadsheet programs split on commas and garble), so comment.char is
+# off - it would also cut any future URL containing a "#" fragment.
 
 sml_scenario_variables <- read.csv(
   "config/sml_scenario_variables.csv",
-  comment.char = "#", na.strings = c("", "NA"), stringsAsFactors = FALSE
+  comment.char = "", na.strings = c("", "NA"), stringsAsFactors = FALSE
 )
 
 # National-legislation precedent for the 10 Annex I Part A/B rows shown in the SML "General
 # Information" table (ui.R) - a 2026-09/10 AI-assisted first-pass scan, UNVERIFIED, kept in a CSV
-# for the same reason as above. Deliberately has no numeric thresholds (see the CSV's own header
-# comment): the legislative landscape is too heterogeneous across states to present as comparable
+# for the same reason as above. Deliberately has no numeric thresholds (see
+# config/README.md): the legislative landscape is too heterogeneous across states to present as comparable
 # figures yet. `variable_id` values here are independent of sml_scenario_variables$id - this table
 # has one row per Annex I Part A/B descriptor (10, including "soc_organic", which has no
 # corresponding Scenario Testing variable) rather than per scenario-testing axis (9).
 sml_national_precedent <- read.csv(
   "config/sml_national_precedent.csv",
-  comment.char = "#", na.strings = c("", "NA"), stringsAsFactors = FALSE
+  comment.char = "", na.strings = c("", "NA"), stringsAsFactors = FALSE
 )
 
 # Clickable "<found>/27" cell for the Annex I table (ui.R). Denominator is always 27 (EU member
@@ -228,7 +230,7 @@ sml_precedent_link <- function(var_id) {
 
 # Bootstrap modal (pure client-side, no server round-trip) listing every state found/uncertain
 # for one Annex I variable, with legislation name, legal category and source link - deliberately
-# no numeric thresholds, see config/sml_national_precedent.csv's own header comment.
+# no numeric thresholds, see config/README.md.
 sml_precedent_modal <- function(var_id, title) {
   rows <- sml_national_precedent[sml_national_precedent$variable_id == var_id, ]
   rows <- rows[order(rows$status != "found", rows$country), ]
