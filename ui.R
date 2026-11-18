@@ -724,7 +724,7 @@ ui <- dashboardPage(
                                       directly in Annex I of the Directive itself.")),
                                 p(style = "color:#8a6d00;", em("\"Existing national precedent\" counts EU Member
                                       States where ANY existing national legislation - in any legal domain,
-                                      not necessarily soil law - already touches this variable, independent of
+                                      not necessarily soil law - already addresses this variable, independent of
                                       the SML. This comes from an AI-assisted research pass (Sept-Oct 2026),
                                       not from the Directive, and has not been independently verified: treat
                                       every entry as a lead to check against the official source, not a citable
@@ -737,7 +737,7 @@ ui <- dashboardPage(
                     ) # close box
                 ), # close fluidrow
                 # Member State profile card (issue #6): pick a state, see an "identity card" with
-                # the legislation touching each SML parameter (from sml_national_precedent.csv)
+                # the legislation addressing each SML parameter (from sml_national_precedent.csv)
                 # and the monitoring network / competent authority (config/sml_member_states.csv).
                 fluidRow(
                     box(

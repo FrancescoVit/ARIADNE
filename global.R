@@ -267,7 +267,7 @@ sml_precedent_modal <- function(var_id, title) {
         ),
         tags$div(class = "modal-body",
           p(em(sprintf(
-            "%d of 27 EU Member States found with existing legislation touching this variable (any legal domain, not necessarily framed as soil law) - %d more flagged as uncertain, the rest not confirmed either way. Unverified first-pass scan, 2026-09/10. No numeric thresholds recorded - see the note below the main table.",
+            "%d of 27 EU Member States found with existing legislation addressing this variable (any legal domain, not necessarily framed as soil law) - %d more flagged as uncertain, the rest not confirmed either way. Unverified first-pass scan, 2026-09/10. No numeric thresholds recorded - see the note below the main table.",
             n_found, n_uncertain
           ))),
           tags$div(style = "overflow-x:auto;",

@@ -69,5 +69,5 @@ on an official source, and record that source.
 | `last_checked` | Date of the check, as YYYY-MM-DD. |
 | `notes` | Anything else worth showing (shown as a short note in the card). |
 
-The card's list of SML parameters touched by national legislation is not stored here: it comes
+The card's list of SML parameters addressed by national legislation is not stored here: it comes
 from `sml_national_precedent.csv`.

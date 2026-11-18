@@ -2730,7 +2730,7 @@ server <- function(input, output) {
       # body
       tags$div(style = "display:flex; flex-wrap:wrap; gap:20px; padding:16px 18px;",
         tags$div(style = "flex:2 1 420px; min-width:0;",
-          tags$h4(style = "margin-top:0;", "SML parameters touched by existing national legislation"),
+          tags$h4(style = "margin-top:0;", "SML parameters addressed by existing national legislation"),
           p(style = "color:#57606a; margin-bottom:6px;",
             sprintf("%d of %d Annex I Part A/B descriptors, %d legislative finding(s).",
                     n_covered, nrow(sml_annex_precedent_index), nrow(leg))),
@@ -2749,7 +2749,7 @@ server <- function(input, output) {
       # footer
       tags$div(style = "background:#fff8e1; color:#8a6d00; font-size:0.85em; padding:8px 18px; border-top:1px solid #f0e2b6;",
         em("Legislation list: AI-assisted research scan (Sept-Oct 2026), not independently verified - any national law
-            touching the variable, not necessarily soil law, and not a transposition of the SML. Treat each entry as a
+            addressing the variable, not necessarily soil law, and not a transposition of the SML. Treat each entry as a
             lead to check on the official source. Network and authority: collected by hand in config/sml_member_states.csv."))
     )
   })
