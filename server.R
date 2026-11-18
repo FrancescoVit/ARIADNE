@@ -2653,4 +2653,104 @@ server <- function(input, output) {
       tags$table(class = "table table-bordered table-striped", tags$tbody(blocks))
     }
   })
+
+  # ---- Member State profile card (SML tab, issue #6) ----
+  # Legislation part comes from config/sml_national_precedent.csv (AI-assisted scan, unverified -
+  # labelled as such); network/authority part from config/sml_member_states.csv, filled in by hand
+  # over time, so empty cells are shown as "not collected yet" rather than hidden.
+  output$ms_card <- renderUI({
+    ms <- input$ms_select
+    if (is.null(ms) || !nzchar(ms)) {
+      return(p(style = "color:#888;", em("Pick a Member State to see its profile.")))
+    }
+    info <- sml_member_states[sml_member_states$country == ms, ][1, ]
+    leg <- sml_national_precedent[sml_national_precedent$country == ms, ]
+
+    filled <- function(x) length(x) == 1 && !is.na(x) && nzchar(trimws(x))
+    not_collected <- tags$span(style = "color:#999; font-style:italic;", "Not collected yet")
+    info_tile <- function(title, value, link) {
+      shown <- if (!filled(value)) {
+        not_collected
+      } else if (filled(link)) {
+        tags$a(href = link, target = "_blank", rel = "noopener", value)
+      } else {
+        value
+      }
+      tags$div(style = "background:#f6f8fa; border:1px solid #e1e4e8; border-radius:6px; padding:10px 12px; margin-bottom:10px;",
+        tags$div(style = "font-size:0.8em; text-transform:uppercase; letter-spacing:0.04em; color:#57606a; margin-bottom:4px;", title),
+        tags$div(style = "font-size:1.05em;", shown))
+    }
+
+    status_badge <- function(status) {
+      if (status == "found") {
+        tags$span(style = "background:#dafbe1; color:#1a7f37; border-radius:10px; padding:1px 8px; font-size:0.75em; font-weight:bold;", "Found")
+      } else {
+        tags$span(style = "background:#fff8c5; color:#9a6700; border-radius:10px; padding:1px 8px; font-size:0.75em; font-weight:bold;", "Uncertain")
+      }
+    }
+
+    n_covered <- sum(sml_annex_precedent_index$id %in% leg$variable_id)
+    param_rows <- lapply(seq_len(nrow(sml_annex_precedent_index)), function(i) {
+      vid <- sml_annex_precedent_index$id[i]
+      rows <- leg[leg$variable_id == vid, ]
+      rows <- rows[order(rows$status != "found"), ]
+      if (nrow(rows) == 0) {
+        return(tags$div(style = "padding:6px 0; border-bottom:1px solid #eee; color:#999;",
+          tags$span(style = "display:inline-block; width:22px;", "–"),
+          sml_annex_precedent_index$title[i]))
+      }
+      tags$div(style = "padding:6px 0; border-bottom:1px solid #eee;",
+        tags$div(
+          tags$span(style = "display:inline-block; width:22px; color:#1a7f37; font-weight:bold;", "✓"),
+          tags$strong(sml_annex_precedent_index$title[i])),
+        lapply(seq_len(nrow(rows)), function(j) {
+          r <- rows[j, ]
+          tags$div(style = "margin-left:22px; margin-top:3px; font-size:0.9em;",
+            status_badge(r$status), " ",
+            if (filled(r$source_link)) tags$a(href = r$source_link, target = "_blank", rel = "noopener", r$instrument) else r$instrument,
+            tags$span(style = "color:#777;", paste0(" - ", r$legal_category)))
+        }))
+    })
+
+    flag <- if (filled(info$iso2)) {
+      tags$img(src = sprintf("https://flagcdn.com/w80/%s.png", tolower(info$iso2)),
+               alt = paste("Flag of", ms), height = "42",
+               style = "border:2px solid #ffffff; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,0.3);")
+    }
+
+    tags$div(style = "border:1px solid #d0d7de; border-radius:10px; overflow:hidden; max-width:1000px; box-shadow:0 2px 6px rgba(0,0,0,0.08);",
+      # header
+      tags$div(style = "background:#003399; color:#ffffff; padding:14px 18px; display:flex; align-items:center; gap:16px;",
+        flag,
+        tags$div(
+          tags$div(style = "font-size:1.6em; font-weight:bold; line-height:1.1;", ms),
+          tags$div(style = "font-size:0.85em; opacity:0.85;",
+                   sprintf("EU Member State%s", if (filled(info$iso2)) paste0(" - ", info$iso2) else "")))
+      ),
+      # body
+      tags$div(style = "display:flex; flex-wrap:wrap; gap:20px; padding:16px 18px;",
+        tags$div(style = "flex:2 1 420px; min-width:0;",
+          tags$h4(style = "margin-top:0;", "SML parameters touched by existing national legislation"),
+          p(style = "color:#57606a; margin-bottom:6px;",
+            sprintf("%d of %d Annex I Part A/B descriptors, %d legislative finding(s).",
+                    n_covered, nrow(sml_annex_precedent_index), nrow(leg))),
+          param_rows
+        ),
+        tags$div(style = "flex:1 1 260px; min-width:0;",
+          tags$h4(style = "margin-top:0;", "Soil health governance"),
+          info_tile("Soil health monitoring network", info$monitoring_network, info$monitoring_network_link),
+          info_tile("National competent authority for the SML", info$competent_authority, info$competent_authority_link),
+          if (filled(info$notes)) tags$p(style = "font-size:0.9em;", info$notes),
+          tags$p(style = "font-size:0.8em; color:#777;",
+            if (filled(info$source)) tagList("Source: ", if (grepl("^https?://", info$source)) tags$a(href = info$source, target = "_blank", rel = "noopener", info$source) else info$source) else "No source recorded yet.",
+            if (filled(info$last_checked)) paste0(" Last checked: ", info$last_checked, ".") else NULL)
+        )
+      ),
+      # footer
+      tags$div(style = "background:#fff8e1; color:#8a6d00; font-size:0.85em; padding:8px 18px; border-top:1px solid #f0e2b6;",
+        em("Legislation list: AI-assisted research scan (Sept-Oct 2026), not independently verified - any national law
+            touching the variable, not necessarily soil law, and not a transposition of the SML. Treat each entry as a
+            lead to check on the official source. Network and authority: collected by hand in config/sml_member_states.csv."))
+    )
+  })
 }

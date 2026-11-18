@@ -735,7 +735,21 @@ ui <- dashboardPage(
                             sml_precedent_modal(sml_annex_precedent_index$id[i], sml_annex_precedent_index$title[i])
                         })
                     ) # close box
-                ) # close fluidrow
+                ), # close fluidrow
+                # Member State profile card (issue #6): pick a state, see an "identity card" with
+                # the legislation touching each SML parameter (from sml_national_precedent.csv)
+                # and the monitoring network / competent authority (config/sml_member_states.csv).
+                fluidRow(
+                    box(
+                        width = 12,
+                        title = "Member State profile",
+                        status = "primary", solidHeader = TRUE, collapsible = TRUE,
+                        selectInput("ms_select", "Show detailed information on member state",
+                                    choices = c("Select a Member State..." = "", sort(sml_member_states$country)),
+                                    selected = "", width = "320px"),
+                        uiOutput("ms_card")
+                    )
+                )
             ), # close SML Overview tab
 
             #### --- Fourth tab content: SML Scenario Testing tab ---####

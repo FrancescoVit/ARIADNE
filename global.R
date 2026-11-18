@@ -284,6 +284,14 @@ sml_precedent_modal <- function(var_id, title) {
 
 # Index of the 10 Annex I Part A/B rows this precedent research covers, used by ui.R to generate
 # one modal per variable (see sml_precedent_modal() above) without repeating the title 10 times.
+# Per-Member-State info for the "Member State profile" card at the bottom of the SML tab
+# (issue #6): monitoring network, competent authority, sources. Filled in gradually by hand, so
+# most cells are empty for now - see config/README.md.
+sml_member_states <- read.csv(
+  "config/sml_member_states.csv",
+  comment.char = "", na.strings = c("", "NA"), stringsAsFactors = FALSE
+)
+
 sml_annex_precedent_index <- data.frame(
   id = c("ec", "soc_clay", "soc_organic", "bulk_density", "phosphorus",
          "erosion", "heavy_metals", "water_holding", "ksat_air_capacity", "soc_stock"),
